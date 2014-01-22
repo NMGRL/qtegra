@@ -142,6 +142,7 @@ class RemoteControl
     //      SetExtractionLens <value>
     
     //==========Detectors===============================================
+    //      ProtectDetector <name>,<On/Off>
 	//      GetDeflection <name>
 	//      SetDeflection <name>,<value>
 	//      GetIonCounterVoltage
