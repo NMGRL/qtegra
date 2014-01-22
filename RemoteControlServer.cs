@@ -33,6 +33,7 @@ using Thermo.Imhotep.Definitions.Core;
 using Thermo.Imhotep.SpectrumLibrary;
 using Thermo.Imhotep.Util;
 
+
 class RemoteControl
 {
 	private static int m_PORT = 1069;
@@ -86,8 +87,6 @@ class RemoteControl
 		}
 		
 	}
-	
-	
 	
     //====================================================================================================================================
 	// 
@@ -425,7 +424,7 @@ class RemoteControl
 //============================================================================================			
         case "ProtectDetector":
             pargs=args[1].Split(',');
-            ProtectDetector(pargs[1], pargs[2])
+            ProtectDetector(pargs[1], pargs[2]);
             break;
 
         case "GetDeflection":
@@ -463,7 +462,7 @@ class RemoteControl
 			
 		case "SetParameter":
 		    pargs=args[1].Split(',');
-		    result=SetParameter(sargs[0], Convert.ToDouble(pargs[1]));
+		    result=SetParameter(pargs[0], Convert.ToDouble(pargs[1]));
 		    break;
 		}
 
@@ -513,9 +512,10 @@ class RemoteControl
 	public static void ProtectDetector(string detname, string state)
 	{
 	    string param=String.Format("Deflection {0} Set",detname);
-	    if (state.ToLower()=='on')
+	    if (state.ToLower()=="on")
 	    {
-	        double v= Instrument.GetParameter(param);
+	    	double v;
+	        Instrument.GetParameter(param, out v);
 	        m_defl[detname]=v;
 	        SetParameter(param, 2000);
 	    }
@@ -588,6 +588,7 @@ class RemoteControl
 		return result;
 	}
 	
+	
 	public static string SetMagnetDAC(double d)
 	{
 		
@@ -599,8 +600,9 @@ class RemoteControl
 			double dev=Math.Abs(d-current_dac);			
 			if (dev>MAGNET_MOVE_THRESHOLD)
 			{
-                t=new Thread (new ParameterizedThreadStart(mSetMagnetDAC));
-                t.Start(d)
+                Thread t= new Thread(delegate(){mSetMagnetDAC(d,dev,current_dac);});
+                t.Start();
+                
                 result="OK";
 			}
 			else
@@ -611,7 +613,8 @@ class RemoteControl
 		return result;
 		
 	}
-	private static void mSetMagnetDAC(double d)
+	
+	public static void mSetMagnetDAC(double d, double dev, double current_dac)
 	{
 	    //incrementally move the magnet to eliminate "ringing"
 	    double step=dev/MAGNET_STEPS;
@@ -624,7 +627,7 @@ class RemoteControl
 
         for(int i=1; i<=MAGNET_STEPS; i++)
         {
-            result=SetParameter("Field Set", current_dac+sign*i*step);
+            SetParameter("Field Set", current_dac+sign*i*step);
             if (MAGNET_STEP_TIME>0)
             {
                 Thread.CurrentThread.Join(MAGNET_STEP_TIME);
