@@ -46,6 +46,7 @@ class RemoteControl
 	private static bool USE_UDP=true;
 	private static bool TAG_DATA=true;
 	private static bool USE_BEAM_BLANK=true;
+	private static bool MAGNET_MOVING=false;
 	private static double MAGNET_MOVE_THRESHOLD=0.25;// threshold to trigger stepped magnet move in DAC units
 	private static int MAGNET_STEPS=20; // number of steps to divide the total magnet displacement
 	public static int MAGNET_STEP_TIME=100; //ms to delay between magnet steps
@@ -121,6 +122,7 @@ class RemoteControl
 	//===========Magnet=================================================
 	//		GetMagnetDAC
 	//		SetMagnetDAC <value> #0-10V
+	//      GetMagnetMoving
 	
 	//===========Source=================================================
 	//		GetHighVoltage or GetHV
@@ -317,7 +319,9 @@ class RemoteControl
 		case "SetMagnetDAC":		
 			result=SetMagnetDAC(Convert.ToDouble(args[1]));
 			break;
-			
+		case "GetMagnetMoving":
+		    result=GetMagnetMoving();
+			break;	
 //============================================================================================
 //    Source Parameters
 //============================================================================================			
@@ -424,7 +428,7 @@ class RemoteControl
 //============================================================================================			
         case "ProtectDetector":
             pargs=args[1].Split(',');
-            ProtectDetector(pargs[1], pargs[2]);
+            ProtectDetector(pargs[0], pargs[1]);
             break;
 
         case "GetDeflection":
@@ -509,6 +513,18 @@ class RemoteControl
 //====================================================================================================================================
 //Qtegra Methods
 //====================================================================================================================================
+	public static string GetMagnetMoving()
+	{
+		if (MAGNET_MOVING)
+		{
+			return "True";
+		}
+		else
+		{
+			return "False";
+		}
+		
+	}
 	public static void ProtectDetector(string detname, string state)
 	{
 	    string param=String.Format("Deflection {0} Set",detname);
@@ -599,7 +615,7 @@ class RemoteControl
 		{
 			double dev=Math.Abs(d-current_dac);			
 			if (dev>MAGNET_MOVE_THRESHOLD)
-			{
+			{   
                 Thread t= new Thread(delegate(){mSetMagnetDAC(d,dev,current_dac);});
                 t.Start();
                 
@@ -616,6 +632,7 @@ class RemoteControl
 	
 	public static void mSetMagnetDAC(double d, double dev, double current_dac)
 	{
+		MAGNET_MOVING=true;
 	    //incrementally move the magnet to eliminate "ringing"
 	    double step=dev/MAGNET_STEPS;
 	    int sign=1;
@@ -633,6 +650,7 @@ class RemoteControl
                 Thread.CurrentThread.Join(MAGNET_STEP_TIME);
             }
         }
+        MAGNET_MOVING=false;
 	}
 	public static string GetIntegrationTime()
 	{
