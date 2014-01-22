@@ -50,7 +50,7 @@ class RemoteControl
 	public static int MAGNET_STEP_TIME=100; //ms to delay between magnet steps
 	private static double LAST_Y_SYMMETRY=0;
 	private static bool IsBLANKED=false;
-	
+	private static Dictionary<string, double> m_defl = new Dictionary<string, double>();
 	public const int ON = 1;
 	public const int OFF = 0;
 
@@ -62,7 +62,7 @@ class RemoteControl
 
 	public static string SCAN_DATA;
 	public static object m_lock=new object();
-    
+
 	public static void Main ()
 	{
 		Instrument= ArgusMC;
@@ -163,6 +163,8 @@ class RemoteControl
 		//Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
 		
 		string[] args = cmd.Trim().Split (' ');
+		string[] pargs;
+
 		double r;
 		switch (args[0]) {
 
@@ -420,6 +422,11 @@ class RemoteControl
 //============================================================================================
 //    Detectors
 //============================================================================================			
+        case "ProtectDetector":
+            pargs=args[1].Split();
+            ProtectDetector(pargs[1], pargs[2])
+            break;
+
         case "GetDeflection":
             if(Instrument.GetParameter(String.Format("Deflection {0} Set",args[1]), out r))
             {
@@ -428,7 +435,7 @@ class RemoteControl
             break;
             
         case "SetDeflection":
-            string[] pargs=args[1].Split(',');
+            pargs=args[1].Split(',');
             result=SetParameter(String.Format("Deflection {0} Set",pargs[0]),Convert.ToDouble(pargs[1]));
 		    break;
 		    
@@ -454,8 +461,8 @@ class RemoteControl
 			break;
 			
 		case "SetParameter":
-		    string[] sargs=args[1].Split(',');
-		    result=SetParameter(sargs[0], Convert.ToDouble(sargs[1]));
+		    pargs=args[1].Split(',');
+		    result=SetParameter(sargs[0], Convert.ToDouble(pargs[1]));
 		    break;
 		}
 
@@ -502,6 +509,24 @@ class RemoteControl
 //====================================================================================================================================
 //Qtegra Methods
 //====================================================================================================================================
+	public static void ProtectDetector(string detname, string state)
+	{
+	    string param=String.Format("Deflection {0} Set",detname);
+	    if (state.ToLower()=='on')
+	    {
+	        double v= Instrument.GetParameter(param);
+	        m_defl[detname]=v;
+	        SetParameter(param, 2000);
+	    }
+	    else
+	    {
+	        if (m_defl.ContainsKey(detname))
+	        {
+	            SetParameter(param, m_defl[detname]);
+	        }
+
+	    }
+	}
 	public static void SetIonCounterState(bool state)
 	{
 		if (state)
@@ -570,24 +595,12 @@ class RemoteControl
 		
 		if (Instrument.GetParameter("Field Set", out current_dac))
 		{
-			int sign=1;
-			if (current_dac>d)
-			{
-				sign=-1;
-			}
-
 			double dev=Math.Abs(d-current_dac);			
 			if (dev>MAGNET_MOVE_THRESHOLD)
 			{
-				double step=dev/MAGNET_STEPS;
-				for(int i=1; i<=MAGNET_STEPS; i++)
-				{
-					result=SetParameter("Field Set", current_dac+sign*i*step);
-					if (MAGNET_STEP_TIME>0)
-					{
-						Thread.CurrentThread.Join(MAGNET_STEP_TIME);
-					}
-				}
+                t=new Thread (new ParameterizedThreadStart(mSetMagnetDAC));
+                t.Start(d)
+                result="OK";
 			}
 			else
 			{
@@ -596,6 +609,26 @@ class RemoteControl
 		}
 		return result;
 		
+	}
+	private static void mSetMagnetDAC(double d)
+	{
+	    //incrementally move the magnet to eliminate "ringing"
+	    double step=dev/MAGNET_STEPS;
+	    int sign=1;
+
+        if (current_dac>d)
+        {
+            sign=-1;
+        }
+
+        for(int i=1; i<=MAGNET_STEPS; i++)
+        {
+            result=SetParameter("Field Set", current_dac+sign*i*step);
+            if (MAGNET_STEP_TIME>0)
+            {
+                Thread.CurrentThread.Join(MAGNET_STEP_TIME);
+            }
+        }
 	}
 	public static string GetIntegrationTime()
 	{
