@@ -203,7 +203,7 @@ class RemoteControl
 			
 			double yval=LAST_Y_SYMMETRY;
 			bool blankbeam=false;
-			if (args[1]=="true")
+			if (args[1].ToLower()=="true")
 			{
 				if(!IsBLANKED)
 				{
