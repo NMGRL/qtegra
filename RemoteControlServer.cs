@@ -423,7 +423,7 @@ class RemoteControl
 //    Detectors
 //============================================================================================			
         case "ProtectDetector":
-            pargs=args[1].Split();
+            pargs=args[1].Split(',');
             ProtectDetector(pargs[1], pargs[2])
             break;
 
