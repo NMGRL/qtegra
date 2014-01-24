@@ -41,18 +41,21 @@ class RemoteControl
 	private static Socket UDP_SOCK;
 	private static Thread SERVER_THREAD;
 	private static TcpListener TCPLISTENER;
-	
-	
+
 	private static bool USE_UDP=true;
 	private static bool TAG_DATA=true;
+
 	private static bool USE_BEAM_BLANK=true;
+
 	private static bool MAGNET_MOVING=false;
 	private static double MAGNET_MOVE_THRESHOLD=0.25;// threshold to trigger stepped magnet move in DAC units
 	private static int MAGNET_STEPS=20; // number of steps to divide the total magnet displacement
 	public static int MAGNET_STEP_TIME=100; //ms to delay between magnet steps
+
 	private static double LAST_Y_SYMMETRY=0;
 	private static bool IsBLANKED=false;
 	private static Dictionary<string, double> m_defl = new Dictionary<string, double>();
+
 	public const int ON = 1;
 	public const int OFF = 0;
 
@@ -170,7 +173,6 @@ class RemoteControl
 		double r;
 		switch (args[0]) {
 
-		
 		case "GetTuningSettingsList":
 			result = GetTuningSettings();
 			break;
