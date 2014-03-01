@@ -327,7 +327,7 @@ class RemoteControl
 			break;
 		case "SetMass":
 		    result = "Ok"
-		    RunMonitorScan(Convert.ToDouble(args[1]))
+		    RunMonitorScan(Convert.ToDouble(args[1]));
 
 		    break;
 //============================================================================================
