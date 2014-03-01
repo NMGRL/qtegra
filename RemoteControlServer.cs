@@ -126,6 +126,7 @@ class RemoteControl
 	//		GetMagnetDAC
 	//		SetMagnetDAC <value> #0-10V
 	//      GetMagnetMoving
+	//      SetMass <value>
 	
 	//===========Source=================================================
 	//		GetHighVoltage or GetHV
@@ -323,7 +324,12 @@ class RemoteControl
 			break;
 		case "GetMagnetMoving":
 		    result=GetMagnetMoving();
-			break;	
+			break;
+		case "SetMass":
+		    result = "Ok"
+		    RunMonitorScan(Convert.ToDouble(args[1]))
+
+		    break;
 //============================================================================================
 //    Source Parameters
 //============================================================================================			
