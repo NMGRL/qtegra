@@ -326,7 +326,7 @@ class RemoteControl
 		    result=GetMagnetMoving();
 			break;
 		case "SetMass":
-		    result = "Ok"
+		    result = "Ok";
 		    RunMonitorScan(Convert.ToDouble(args[1]));
 
 		    break;
