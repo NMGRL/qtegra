@@ -170,6 +170,7 @@ class RemoteControl
 		
 		string[] args = cmd.Trim().Split (' ');
 		string[] pargs;
+        string jargs;
 
 		double r;
 		switch (args[0]) {
@@ -440,14 +441,17 @@ class RemoteControl
             break;
 
         case "GetDeflection":
-            if(Instrument.GetParameter(String.Format("Deflection {0} Set",args[1]), out r))
+            jargs=String.Join(" ", args.Slice(1,-1));
+            if(Instrument.GetParameter(String.Format("Deflection {0} Set",jargs), out r))
             {
                 result=r.ToString();
             }
             break;
             
         case "SetDeflection":
-            pargs=args[1].Split(',');
+            jargs=String.Join(" ", args.Slice(1,-1));
+            pargs=jargs.Split(',');
+
             result=SetParameter(String.Format("Deflection {0} Set",pargs[0]),Convert.ToDouble(pargs[1]));
 		    break;
 		    
