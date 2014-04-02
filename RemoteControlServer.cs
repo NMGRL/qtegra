@@ -441,7 +441,7 @@ class RemoteControl
             break;
 
         case "GetDeflection":
-            jargs=String.Join(" ", args.Slice(1,-1));
+            jargs=String.Join(" ", Slice(args,1,-1));
             if(Instrument.GetParameter(String.Format("Deflection {0} Set",jargs), out r))
             {
                 result=r.ToString();
@@ -449,7 +449,7 @@ class RemoteControl
             break;
             
         case "SetDeflection":
-            jargs=String.Join(" ", args.Slice(1,-1));
+            jargs=String.Join(" ", Slice(args,1,-1));
             pargs=jargs.Split(',');
 
             result=SetParameter(String.Format("Deflection {0} Set",pargs[0]),Convert.ToDouble(pargs[1]));
@@ -1032,16 +1032,14 @@ class RemoteControl
 		}
 		return string.Empty;
 	}
-}
-
-//copied from http://www.dotnetperls.com/array-slice
-public static class Extensions
-{
-    /// <summary>
-    /// Get the array slice between the two indexes.
-    /// ... Inclusive for start index, exclusive for end index.
-    /// </summary>
-    public static T[] Slice<T>(this T[] source, int start, int end)
+	
+	
+	//====================================================================================================================================
+	//Helper Methods
+	//====================================================================================================================================
+	
+	//adapted from http://www.dotnetperls.com/array-slice
+	private static string[] Slice(string[] source, int start, int end)
     {
 	// Handles negative ends.
 	if (end < 0)
@@ -1051,7 +1049,7 @@ public static class Extensions
 	int len = end - start;
 
 	// Return new array.
-	T[] res = new T[len];
+	string[] res = new string[len];
 	for (int i = 0; i < len; i++)
 	{
 	    res[i] = source[i + start];
@@ -1059,3 +1057,5 @@ public static class Extensions
 	return res;
     }
 }
+
+
