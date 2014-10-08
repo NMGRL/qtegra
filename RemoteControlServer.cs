@@ -18,7 +18,7 @@ under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 
-__version__=1.0
+__version__=1.0.1
 */
 using System.IO;
 using System.Text;
@@ -112,7 +112,7 @@ class RemoteControl
 	//		GetActiveSubCupConfiguration
 	// 		GetSubCupParameters returns list of Deflection voltages and the Ion Counter supply voltage
 	//		SetSubCupConfiguration <sub cup name>
-	
+	//      ActivateCupConfiguration <cup name> <sub cup name>
 	//===========Ion Counter============================================
 	//      ActivateIonCounter
 	//      DeactivateIonCounter
@@ -126,6 +126,7 @@ class RemoteControl
 	//		GetMagnetDAC
 	//		SetMagnetDAC <value> #0-10V
 	//      GetMagnetMoving
+	//      SetMass <value>
 	
 	//===========Source=================================================
 	//		GetHighVoltage or GetHV
@@ -169,6 +170,7 @@ class RemoteControl
 		
 		string[] args = cmd.Trim().Split (' ');
 		string[] pargs;
+		string jargs;
 
 		double r;
 		switch (args[0]) {
@@ -265,17 +267,22 @@ class RemoteControl
 			break;
 			
 		case "SetSubCupConfiguration":
-			Logger.Log(LogLevel.Debug, String.Format("Set SupCup {0}",cmd));
-			if(ActivateCupConfiguration ("Argon", cmd.Remove(0,23)))
-			{
-				result="OK";
-			}
-			else
-			{
-				result=String.Format("Error: could not set sub cup to {0}", args[1]);
-			}
-			break;	
-			
+//			Logger.Log(LogLevel.Debug, String.Format("Set SupCup {0}",cmd));
+//			if(ActivateCupConfiguration ("Argon", cmd.Remove(0,23)))
+//			{
+//				result="OK";
+//			}
+//			else
+//			{
+//				result=String.Format("Error: could not set sub cup to {0}", args[1]);
+//			}
+//			break;
+            result=mActivateCup('Argon', args[1])
+			break;
+
+		case "ActivateCupConfiguration":
+		    result = mActivateCup(args[1], args[2])
+            break;
 //============================================================================================
 //   Ion Counter
 //============================================================================================					
@@ -323,7 +330,12 @@ class RemoteControl
 			break;
 		case "GetMagnetMoving":
 		    result=GetMagnetMoving();
-			break;	
+			break;
+		case "SetMass":
+		    result = "Ok";
+		    RunMonitorScan(Convert.ToDouble(args[1]));
+
+		    break;
 //============================================================================================
 //    Source Parameters
 //============================================================================================			
@@ -434,14 +446,17 @@ class RemoteControl
             break;
 
         case "GetDeflection":
-            if(Instrument.GetParameter(String.Format("Deflection {0} Set",args[1]), out r))
+            jargs=String.Join(" ", Slice(args,1,-1));
+            if(Instrument.GetParameter(String.Format("Deflection {0} Set",jargs), out r))
             {
                 result=r.ToString();
             }
             break;
             
         case "SetDeflection":
-            pargs=args[1].Split(',');
+            jargs=String.Join(" ", Slice(args,1,-1));
+            pargs=jargs.Split(',');
+
             result=SetParameter(String.Format("Deflection {0} Set",pargs[0]),Convert.ToDouble(pargs[1]));
 		    break;
 		    
@@ -515,6 +530,18 @@ class RemoteControl
 //====================================================================================================================================
 //Qtegra Methods
 //====================================================================================================================================
+	public static string mActivateCup(string a, string b)
+    {
+        if(ActivateCupConfiguration(a, b))
+        {
+            result="OK";
+        }
+        else
+        {
+            result=String.Format("Error: could not set cup={0}, sub cup to {1} ", a, b);
+        }
+
+    }
 	public static string GetMagnetMoving()
 	{
 		if (MAGNET_MOVING)
@@ -1022,4 +1049,30 @@ class RemoteControl
 		}
 		return string.Empty;
 	}
+	
+	
+	//====================================================================================================================================
+	//Helper Methods
+	//====================================================================================================================================
+	
+	//adapted from http://www.dotnetperls.com/array-slice
+	private static string[] Slice(string[] source, int start, int end)
+    {
+	// Handles negative ends.
+	if (end < 0)
+	{
+	    end = source.Length + end;
+	}
+	int len = end - start;
+
+	// Return new array.
+	string[] res = new string[len];
+	for (int i = 0; i < len; i++)
+	{
+	    res[i] = source[i + start];
+	}
+	return res;
+    }
 }
+
+
