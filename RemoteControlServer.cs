@@ -112,7 +112,7 @@ class RemoteControl
 	//		GetActiveSubCupConfiguration
 	// 		GetSubCupParameters returns list of Deflection voltages and the Ion Counter supply voltage
 	//		SetSubCupConfiguration <sub cup name>
-	
+	//      ActivateCupConfiguration <cup name> <sub cup name>
 	//===========Ion Counter============================================
 	//      ActivateIonCounter
 	//      DeactivateIonCounter
@@ -267,17 +267,22 @@ class RemoteControl
 			break;
 			
 		case "SetSubCupConfiguration":
-			Logger.Log(LogLevel.Debug, String.Format("Set SupCup {0}",cmd));
-			if(ActivateCupConfiguration ("Argon", cmd.Remove(0,23)))
-			{
-				result="OK";
-			}
-			else
-			{
-				result=String.Format("Error: could not set sub cup to {0}", args[1]);
-			}
-			break;	
-			
+//			Logger.Log(LogLevel.Debug, String.Format("Set SupCup {0}",cmd));
+//			if(ActivateCupConfiguration ("Argon", cmd.Remove(0,23)))
+//			{
+//				result="OK";
+//			}
+//			else
+//			{
+//				result=String.Format("Error: could not set sub cup to {0}", args[1]);
+//			}
+//			break;
+            result=mActivateCup('Argon', args[1])
+			break;
+
+		case "ActivateCupConfiguration":
+		    result = mActivateCup(args[1], args[2])
+            break;
 //============================================================================================
 //   Ion Counter
 //============================================================================================					
@@ -525,6 +530,18 @@ class RemoteControl
 //====================================================================================================================================
 //Qtegra Methods
 //====================================================================================================================================
+	public static string mActivateCup(string a, string b)
+    {
+        if(ActivateCupConfiguration(a, b))
+        {
+            result="OK";
+        }
+        else
+        {
+            result=String.Format("Error: could not set cup={0}, sub cup to {1} ", a, b);
+        }
+
+    }
 	public static string GetMagnetMoving()
 	{
 		if (MAGNET_MOVING)
