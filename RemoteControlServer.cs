@@ -68,6 +68,11 @@ class RemoteControl
 	public static string SCAN_DATA;
 	public static object m_lock=new object();
 
+    private static List<string> DETECTOR_NAMES = new List<string>(new string[]{"CUP 4,H2","CUP 3,H1",
+																  "CUP 2,AX",
+																  "CUP 1,L1","CUP 0,L2",
+																  "CDD 0,CDD"
+																  })
 	public static void Main ()
 	{
 		Instrument= ArgusMC;
@@ -152,6 +157,7 @@ class RemoteControl
 	//      SetDeflection <name>,<value>
 	//      GetIonCounterVoltage
 	//      SetIonCounterVoltage <value>
+	//      GetGain <name>
 	//==================================================================
 	//		Error Responses:
 	//			Error: Invalid Command   - the command is poorly formated or does not exist. 
@@ -443,6 +449,7 @@ class RemoteControl
         case "ProtectDetector":
             pargs=args[1].Split(',');
             ProtectDetector(pargs[0], pargs[1]);
+            result="OK";
             break;
 
         case "GetDeflection":
@@ -470,7 +477,13 @@ class RemoteControl
         case "SetIonCounterVoltage":
         	result=SetParameter("CDD Supply Set", Convert.ToDouble(args[1]));
             break;
-		    	    
+		case "GetGain":
+		    result=GetGain();
+		    break;
+		case "SetGain":
+		    result="OK"
+		    SetGain();
+		    break;
 //============================================================================================
 //    Generic
 //============================================================================================			
@@ -700,6 +713,39 @@ class RemoteControl
 		
 		return result;
 	}
+	public static void SetGain(String name, double v)
+	{
+        foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
+	    {
+	        foreach (string detname in DETECTOR_NAMES)
+			{
+				string[] args=detname.Split(',');
+				if(args[1]==item.Identifier)
+				{
+                    item.Gain=v;
+                    break;
+				}
+			}
+	    }
+	}
+	public static double GetGain(String name)
+	{
+        double gain=0;
+	    foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
+	    {
+	        foreach (string detname in DETECTOR_NAMES)
+			{
+				string[] args=detname.Split(',');
+				if(args[1]==item.Identifier)
+				{
+                    gain=item.Gain;
+                    break;
+				}
+			}
+	    }
+
+	    return gain;
+	}
 	public static void ScanDataAvailable(object sender, EventArgs<Spectrum> e)
 	{ 
 	
@@ -712,11 +758,7 @@ class RemoteControl
 	
 			// change detnames to a list of detectors on your system
 			// this is is for an Argus VI c. 2010
-			List<string> detnames = new List<string>(new string[]{"CUP 4,H2","CUP 3,H1",
-																  "CUP 2,AX",
-																  "CUP 1,L1","CUP 0,L2",
-																  "CDD 0,CDD"
-																  });										  
+			;
 			double cddMass=0;
 			double cddCounts=0;
 			bool cdd=false;
@@ -730,7 +772,7 @@ class RemoteControl
 					{
 						if (item.Mass==point.Mass)
 						{	string cupName="";
-							foreach (string detname in detnames)
+							foreach (string detname in DETECTOR_NAMES)
 							{
 								string[] args=detname.Split(',');
 								if(args[0]==item.Identifier)
