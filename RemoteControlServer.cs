@@ -83,22 +83,10 @@ class RemoteControl
 		GetTuningSettings();
 		PrepareEnvironment();
 		
-		/*
+		
 		//list attributes
-		listattributes(Instrument.GetType(), "instrument");
-		listattributes(Instrument.DetectorSetupSettings.GetType(), "detsettings");
-		//listattributes(Instrument.CupSettingDataList, "cuplist");
-		Logger.Log(LogLevel.UserInfo, String.Format("{0}",Instrument.CupSettingDataList.ToString()));
-		foreach (IRMSBaseCupSettingData ci in Instrument.CupSettingDataList)
-		{
-			//Logger.Log(LogLevel.UserInfo, String.Format("{0}, {1}", ci.Identifier, ci.CupGainSwitchDacName));
-			//listattributes(ci.GetType(), ci.Identifier);
-		}
-		foreach (UFCCalibrationData ci in Instrument.UFCCalibrationData)
-		{
-			//Logger.Log(LogLevel.UserInfo, String.Format("{0}, {1}", ci.Identifier, ci.CupGainSwitchDacName));
-			listattributes(ci.GetType(), ci.Identifier);
-		}*/
+		//listattributes(Instrument.GetType(), "instrument");
+		
         //setup data recording
 		InitializeDataRecord();
 		
@@ -112,40 +100,7 @@ class RemoteControl
 		}
 		
 	}
-	private static void listattributes(Type t, string identifier)
-	{	Logger.Log(LogLevel.UserInfo, "List detector attributes");
-	    //Type t = item.GetType();
-		//PropertyInfo[] pia = t.GetProperties();
-		//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
-		//foreach (PropertyInfo pi in pia)
-		//{
-		//	Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
-		//			pi.ToString()));
-		//}
-		MemberInfo[] ms = t.GetMembers();
-		foreach (MemberInfo mi in ms)
-		{
-		Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}",identifier,
-					mi.ToString()));
-		}
-		/*IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
-		foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
-		{	Type t = item.GetType();
-			PropertyInfo[] pia = t.GetProperties();
-			//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
-			foreach (PropertyInfo pi in pia)
-			{
-				Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
-						pi.ToString()));
-			}
-			MemberInfo[] ms = t.GetMembers();
-			foreach (MemberInfo mi in ms)
-			{
-			Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}", item.Identifier,
-						mi.ToString()));
-			}
-		}*/
-	}
+	
     //====================================================================================================================================
 	// 
 	//	Commands are case sensitive and in CamelCase
@@ -1171,6 +1126,41 @@ class RemoteControl
 	}
 	return res;
     }
+	
+	private static void listattributes(Type t, string identifier)
+	{	Logger.Log(LogLevel.UserInfo, "List detector attributes");
+	    //Type t = item.GetType();
+		//PropertyInfo[] pia = t.GetProperties();
+		//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
+		//foreach (PropertyInfo pi in pia)
+		//{
+		//	Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
+		//			pi.ToString()));
+		//}
+		MemberInfo[] ms = t.GetMembers();
+		foreach (MemberInfo mi in ms)
+		{
+		Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}",identifier,
+					mi.ToString()));
+		}
+		/*IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
+		foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
+		{	Type t = item.GetType();
+			PropertyInfo[] pia = t.GetProperties();
+			//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
+			foreach (PropertyInfo pi in pia)
+			{
+				Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
+						pi.ToString()));
+			}
+			MemberInfo[] ms = t.GetMembers();
+			foreach (MemberInfo mi in ms)
+			{
+			Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}", item.Identifier,
+						mi.ToString()));
+			}
+		}*/
+	}
 }
 
 
