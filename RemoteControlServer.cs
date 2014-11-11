@@ -177,7 +177,7 @@ class RemoteControl
 	{
 		
 		string result = "Error: Invalid Command";
-		Logger.Log(LogLevel.UserInfo, String.Format("Executing {0}", cmd));
+		//Logger.Log(LogLevel.UserInfo, String.Format("Executing {0}", cmd));
 		
 		string[] args = cmd.Trim().Split (' ');
 		string[] pargs;
@@ -507,7 +507,7 @@ class RemoteControl
 		    result=SetParameter(pargs[0], Convert.ToDouble(pargs[1]));
 		    break;
 		}
-
+		log(String.Format("{0} => {1}", cmd, result));
 		return result;
 	}
 //============================================================================================
