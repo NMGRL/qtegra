@@ -83,10 +83,27 @@ class RemoteControl
 		GetTuningSettings();
 		PrepareEnvironment();
 		
-		
+		foreach (string d in DETECTOR_NAMES)
+		{
+			string dd=d.Split(',')[1];
+			log(String.Format("Gain {0}={1}", dd, GetGain(dd)));
+		}
+		/*
 		//list attributes
-		//listattributes(Instrument.GetType(), "instrument");
-		
+		listattributes(Instrument.GetType(), "instrument");
+		listattributes(Instrument.DetectorSetupSettings.GetType(), "detsettings");
+		//listattributes(Instrument.CupSettingDataList, "cuplist");
+		Logger.Log(LogLevel.UserInfo, String.Format("{0}",Instrument.CupSettingDataList.ToString()));
+		foreach (IRMSBaseCupSettingData ci in Instrument.CupSettingDataList)
+		{
+			//Logger.Log(LogLevel.UserInfo, String.Format("{0}, {1}", ci.Identifier, ci.CupGainSwitchDacName));
+			//listattributes(ci.GetType(), ci.Identifier);
+		}
+		foreach (UFCCalibrationData ci in Instrument.UFCCalibrationData)
+		{
+			//Logger.Log(LogLevel.UserInfo, String.Format("{0}, {1}", ci.Identifier, ci.CupGainSwitchDacName));
+			listattributes(ci.GetType(), ci.Identifier);
+		}*/
         //setup data recording
 		InitializeDataRecord();
 		
@@ -100,7 +117,44 @@ class RemoteControl
 		}
 		
 	}
-	
+	private static void log(string msg)
+	{
+		Logger.Log(LogLevel.UserInfo, msg);
+	}
+	private static void listattributes(Type t, string identifier)
+	{	Logger.Log(LogLevel.UserInfo, "List detector attributes");
+	    //Type t = item.GetType();
+		//PropertyInfo[] pia = t.GetProperties();
+		//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
+		//foreach (PropertyInfo pi in pia)
+		//{
+		//	Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
+		//			pi.ToString()));
+		//}
+		MemberInfo[] ms = t.GetMembers();
+		foreach (MemberInfo mi in ms)
+		{
+		Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}",identifier,
+					mi.ToString()));
+		}
+		/*IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
+		foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
+		{	Type t = item.GetType();
+			PropertyInfo[] pia = t.GetProperties();
+			//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
+			foreach (PropertyInfo pi in pia)
+			{
+				Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
+						pi.ToString()));
+			}
+			MemberInfo[] ms = t.GetMembers();
+			foreach (MemberInfo mi in ms)
+			{
+			Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}", item.Identifier,
+						mi.ToString()));
+			}
+		}*/
+	}
     //====================================================================================================================================
 	// 
 	//	Commands are case sensitive and in CamelCase
@@ -722,37 +776,31 @@ class RemoteControl
 		
 		return result;
 	}
+	
 	public static void SetGain(String name, double v)
 	{
-	
-        foreach (UFCCalibrationData item in Instrument.UFCCalibrationData)
+		string id = mGetDetectorIdentifier(name);
+		foreach (UFCCalibrationData item in Instrument.UFCCalibrationData)
 	    {
-	        foreach (string detname in DETECTOR_NAMES)
-			{
-				string[] args=detname.Split(',');
-				if(args[1]==item.Identifier)
-				{
-                    item.Gain=v;
-                    break;
-				}
-			}
+	        if (item.Identifier==id)
+	        {
+	        	item.Gain=v;
+	        	break;
+	        }
 	    }
 	    
 	}
 	public static string GetGain(String name)
 	{
 		double gain=0;
+		string id = mGetDetectorIdentifier(name);
 		foreach (UFCCalibrationData item in Instrument.UFCCalibrationData)
 	    {
-	        foreach (string detname in DETECTOR_NAMES)
-			{
-				string[] args=detname.Split(',');
-				if(args[1]==item.Identifier)
-				{
-                    gain=Convert.ToDouble(item.Gain);
-                    break;
-				}
-			}
+	        if (item.Identifier==id)
+	        {
+	        	gain=Convert.ToDouble(item.Gain);
+	        	break;
+	        }
 	    }
 
 	    return String.Format("{0}",gain);
@@ -1107,7 +1155,20 @@ class RemoteControl
 	//====================================================================================================================================
 	//Helper Methods
 	//====================================================================================================================================
-	
+	private static string mGetDetectorIdentifier(string name)
+	{
+		string ret="";
+		foreach (string detname in DETECTOR_NAMES)
+		{
+			string[] args=detname.Split(',');
+			if(args[1]==name)
+			{		
+                ret=args[0];
+                break;
+			}
+		}
+		return ret;
+	}
 	//adapted from http://www.dotnetperls.com/array-slice
 	private static string[] Slice(string[] source, int start, int end)
     {
@@ -1126,41 +1187,6 @@ class RemoteControl
 	}
 	return res;
     }
-	
-	private static void listattributes(Type t, string identifier)
-	{	Logger.Log(LogLevel.UserInfo, "List detector attributes");
-	    //Type t = item.GetType();
-		//PropertyInfo[] pia = t.GetProperties();
-		//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
-		//foreach (PropertyInfo pi in pia)
-		//{
-		//	Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
-		//			pi.ToString()));
-		//}
-		MemberInfo[] ms = t.GetMembers();
-		foreach (MemberInfo mi in ms)
-		{
-		Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}",identifier,
-					mi.ToString()));
-		}
-		/*IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
-		foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
-		{	Type t = item.GetType();
-			PropertyInfo[] pia = t.GetProperties();
-			//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
-			foreach (PropertyInfo pi in pia)
-			{
-				Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
-						pi.ToString()));
-			}
-			MemberInfo[] ms = t.GetMembers();
-			foreach (MemberInfo mi in ms)
-			{
-			Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}", item.Identifier,
-						mi.ToString()));
-			}
-		}*/
-	}
 }
 
 
