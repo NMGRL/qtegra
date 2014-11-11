@@ -27,7 +27,7 @@ using System.Net.Sockets;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
-
+using System.Reflection;
 using Thermo.Imhotep.BasicHardware;
 using Thermo.Imhotep.Definitions.Core;
 using Thermo.Imhotep.SpectrumLibrary;
@@ -72,7 +72,7 @@ class RemoteControl
 																  "CUP 2,AX",
 																  "CUP 1,L1","CUP 0,L2",
 																  "CDD 0,CDD"
-																  })
+																  });
 	public static void Main ()
 	{
 		Instrument= ArgusMC;
@@ -83,6 +83,22 @@ class RemoteControl
 		GetTuningSettings();
 		PrepareEnvironment();
 		
+		/*
+		//list attributes
+		listattributes(Instrument.GetType(), "instrument");
+		listattributes(Instrument.DetectorSetupSettings.GetType(), "detsettings");
+		//listattributes(Instrument.CupSettingDataList, "cuplist");
+		Logger.Log(LogLevel.UserInfo, String.Format("{0}",Instrument.CupSettingDataList.ToString()));
+		foreach (IRMSBaseCupSettingData ci in Instrument.CupSettingDataList)
+		{
+			//Logger.Log(LogLevel.UserInfo, String.Format("{0}, {1}", ci.Identifier, ci.CupGainSwitchDacName));
+			//listattributes(ci.GetType(), ci.Identifier);
+		}
+		foreach (UFCCalibrationData ci in Instrument.UFCCalibrationData)
+		{
+			//Logger.Log(LogLevel.UserInfo, String.Format("{0}, {1}", ci.Identifier, ci.CupGainSwitchDacName));
+			listattributes(ci.GetType(), ci.Identifier);
+		}*/
         //setup data recording
 		InitializeDataRecord();
 		
@@ -96,7 +112,40 @@ class RemoteControl
 		}
 		
 	}
-	
+	private static void listattributes(Type t, string identifier)
+	{	Logger.Log(LogLevel.UserInfo, "List detector attributes");
+	    //Type t = item.GetType();
+		//PropertyInfo[] pia = t.GetProperties();
+		//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
+		//foreach (PropertyInfo pi in pia)
+		//{
+		//	Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
+		//			pi.ToString()));
+		//}
+		MemberInfo[] ms = t.GetMembers();
+		foreach (MemberInfo mi in ms)
+		{
+		Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}",identifier,
+					mi.ToString()));
+		}
+		/*IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
+		foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
+		{	Type t = item.GetType();
+			PropertyInfo[] pia = t.GetProperties();
+			//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
+			foreach (PropertyInfo pi in pia)
+			{
+				Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
+						pi.ToString()));
+			}
+			MemberInfo[] ms = t.GetMembers();
+			foreach (MemberInfo mi in ms)
+			{
+			Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}", item.Identifier,
+						mi.ToString()));
+			}
+		}*/
+	}
     //====================================================================================================================================
 	// 
 	//	Commands are case sensitive and in CamelCase
@@ -172,7 +221,7 @@ class RemoteControl
 	{
 		
 		string result = "Error: Invalid Command";
-		//Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
+		Logger.Log(LogLevel.UserInfo, String.Format("Executing {0}", cmd));
 		
 		string[] args = cmd.Trim().Split (' ');
 		string[] pargs;
@@ -283,11 +332,11 @@ class RemoteControl
 //				result=String.Format("Error: could not set sub cup to {0}", args[1]);
 //			}
 //			break;
-            result=mActivateCup('Argon', args[1])
+            result=mActivateCup("Argon", args[1]);
 			break;
 
 		case "ActivateCupConfiguration":
-		    result = mActivateCup(args[1], args[2])
+		    result = mActivateCup(args[1], args[2]);
             break;
 //============================================================================================
 //   Ion Counter
@@ -478,11 +527,15 @@ class RemoteControl
         	result=SetParameter("CDD Supply Set", Convert.ToDouble(args[1]));
             break;
 		case "GetGain":
-		    result=GetGain();
+			jargs=String.Join(" ", Slice(args,1,-1));
+		    result=GetGain(jargs);
 		    break;
 		case "SetGain":
-		    result="OK"
-		    SetGain();
+			jargs=String.Join(" ", Slice(args,1,-1));
+            pargs=jargs.Split(',');
+
+		    result="OK";
+		    SetGain(pargs[0], Convert.ToDouble(pargs[1]));
 		    break;
 //============================================================================================
 //    Generic
@@ -545,6 +598,7 @@ class RemoteControl
 //====================================================================================================================================
 	public static string mActivateCup(string a, string b)
     {
+    	string result;
         if(ActivateCupConfiguration(a, b))
         {
             result="OK";
@@ -553,7 +607,7 @@ class RemoteControl
         {
             result=String.Format("Error: could not set cup={0}, sub cup to {1} ", a, b);
         }
-
+		return result;
     }
 	public static string GetMagnetMoving()
 	{
@@ -715,7 +769,8 @@ class RemoteControl
 	}
 	public static void SetGain(String name, double v)
 	{
-        foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
+	
+        foreach (UFCCalibrationData item in Instrument.UFCCalibrationData)
 	    {
 	        foreach (string detname in DETECTOR_NAMES)
 			{
@@ -727,24 +782,25 @@ class RemoteControl
 				}
 			}
 	    }
+	    
 	}
-	public static double GetGain(String name)
+	public static string GetGain(String name)
 	{
-        double gain=0;
-	    foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
+		double gain=0;
+		foreach (UFCCalibrationData item in Instrument.UFCCalibrationData)
 	    {
 	        foreach (string detname in DETECTOR_NAMES)
 			{
 				string[] args=detname.Split(',');
 				if(args[1]==item.Identifier)
 				{
-                    gain=item.Gain;
+                    gain=Convert.ToDouble(item.Gain);
                     break;
 				}
 			}
 	    }
 
-	    return gain;
+	    return String.Format("{0}",gain);
 	}
 	public static void ScanDataAvailable(object sender, EventArgs<Spectrum> e)
 	{ 
