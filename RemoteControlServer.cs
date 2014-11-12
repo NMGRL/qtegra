@@ -27,7 +27,7 @@ using System.Net.Sockets;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
-
+using System.Reflection;
 using Thermo.Imhotep.BasicHardware;
 using Thermo.Imhotep.Definitions.Core;
 using Thermo.Imhotep.SpectrumLibrary;
@@ -72,7 +72,7 @@ class RemoteControl
 																  "CUP 2,AX",
 																  "CUP 1,L1","CUP 0,L2",
 																  "CDD 0,CDD"
-																  })
+																  });
 	public static void Main ()
 	{
 		Instrument= ArgusMC;
@@ -82,6 +82,11 @@ class RemoteControl
 		
 		GetTuningSettings();
 		PrepareEnvironment();
+		
+		//mReportGains();
+	
+		//list attributes
+		//listattributes(Instrument.GetType(), "instrument");
 		
         //setup data recording
 		InitializeDataRecord();
@@ -172,7 +177,7 @@ class RemoteControl
 	{
 		
 		string result = "Error: Invalid Command";
-		//Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
+		//Logger.Log(LogLevel.UserInfo, String.Format("Executing {0}", cmd));
 		
 		string[] args = cmd.Trim().Split (' ');
 		string[] pargs;
@@ -283,11 +288,11 @@ class RemoteControl
 //				result=String.Format("Error: could not set sub cup to {0}", args[1]);
 //			}
 //			break;
-            result=mActivateCup('Argon', args[1])
+            result=mActivateCup("Argon", args[1]);
 			break;
 
 		case "ActivateCupConfiguration":
-		    result = mActivateCup(args[1], args[2])
+		    result = mActivateCup(args[1], args[2]);
             break;
 //============================================================================================
 //   Ion Counter
@@ -453,7 +458,7 @@ class RemoteControl
             break;
 
         case "GetDeflection":
-            jargs=String.Join(" ", Slice(args,1,-1));
+            jargs=String.Join(" ", Slice(args,1,0));
             if(Instrument.GetParameter(String.Format("Deflection {0} Set",jargs), out r))
             {
                 result=r.ToString();
@@ -461,10 +466,9 @@ class RemoteControl
             break;
             
         case "SetDeflection":
-            jargs=String.Join(" ", Slice(args,1,-1));
+            jargs=String.Join(" ", Slice(args,1,0));
             pargs=jargs.Split(',');
-
-            result=SetParameter(String.Format("Deflection {0} Set",pargs[0]),Convert.ToDouble(pargs[1]));
+			result=SetParameter(String.Format("Deflection {0} Set",pargs[0]),Convert.ToDouble(pargs[1]));
 		    break;
 		    
 		case "GetIonCounterVoltage":
@@ -478,11 +482,15 @@ class RemoteControl
         	result=SetParameter("CDD Supply Set", Convert.ToDouble(args[1]));
             break;
 		case "GetGain":
-		    result=GetGain();
+			jargs=String.Join(" ", Slice(args,1,0));
+		    result=GetGain(jargs);
 		    break;
 		case "SetGain":
-		    result="OK"
-		    SetGain();
+			jargs=String.Join(" ", Slice(args,1,0));
+            pargs=jargs.Split(',');
+
+		    result="OK";
+		    SetGain(pargs[0], Convert.ToDouble(pargs[1]));
 		    break;
 //============================================================================================
 //    Generic
@@ -499,7 +507,7 @@ class RemoteControl
 		    result=SetParameter(pargs[0], Convert.ToDouble(pargs[1]));
 		    break;
 		}
-
+		log(String.Format("{0} => {1}", cmd, result));
 		return result;
 	}
 //============================================================================================
@@ -545,6 +553,7 @@ class RemoteControl
 //====================================================================================================================================
 	public static string mActivateCup(string a, string b)
     {
+    	string result;
         if(ActivateCupConfiguration(a, b))
         {
             result="OK";
@@ -553,7 +562,7 @@ class RemoteControl
         {
             result=String.Format("Error: could not set cup={0}, sub cup to {1} ", a, b);
         }
-
+		return result;
     }
 	public static string GetMagnetMoving()
 	{
@@ -713,38 +722,34 @@ class RemoteControl
 		
 		return result;
 	}
+	
 	public static void SetGain(String name, double v)
 	{
-        foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
+		string id = mGetDetectorIdentifier(name);
+		foreach (UFCCalibrationData item in Instrument.UFCCalibrationData)
 	    {
-	        foreach (string detname in DETECTOR_NAMES)
-			{
-				string[] args=detname.Split(',');
-				if(args[1]==item.Identifier)
-				{
-                    item.Gain=v;
-                    break;
-				}
-			}
+	        if (item.Identifier==id)
+	        {
+	        	item.Gain=v;
+	        	break;
+	        }
 	    }
+	    
 	}
-	public static double GetGain(String name)
+	public static string GetGain(String name)
 	{
-        double gain=0;
-	    foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
+		double gain=0;
+		string id = mGetDetectorIdentifier(name);
+		foreach (UFCCalibrationData item in Instrument.UFCCalibrationData)
 	    {
-	        foreach (string detname in DETECTOR_NAMES)
-			{
-				string[] args=detname.Split(',');
-				if(args[1]==item.Identifier)
-				{
-                    gain=item.Gain;
-                    break;
-				}
-			}
+	        if (item.Identifier==id)
+	        {
+	        	gain=Convert.ToDouble(item.Gain);
+	        	break;
+	        }
 	    }
 
-	    return gain;
+	    return String.Format("{0}",gain);
 	}
 	public static void ScanDataAvailable(object sender, EventArgs<Spectrum> e)
 	{ 
@@ -1096,12 +1101,71 @@ class RemoteControl
 	//====================================================================================================================================
 	//Helper Methods
 	//====================================================================================================================================
-	
+	private static void mReportGains()
+	{
+		foreach (string d in DETECTOR_NAMES)
+		{
+			string dd=d.Split(',')[1];
+			log(String.Format("Gain {0}={1}", dd, GetGain(dd)));
+		}
+	}
+	private static void log(string msg)
+	{
+		Logger.Log(LogLevel.UserInfo, msg);
+	}
+	private static void listattributes(Type t, string identifier)
+	{	Logger.Log(LogLevel.UserInfo, "List detector attributes");
+	    //Type t = item.GetType();
+		//PropertyInfo[] pia = t.GetProperties();
+		//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
+		//foreach (PropertyInfo pi in pia)
+		//{
+		//	Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
+		//			pi.ToString()));
+		//}
+		MemberInfo[] ms = t.GetMembers();
+		foreach (MemberInfo mi in ms)
+		{
+		Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}",identifier,
+					mi.ToString()));
+		}
+		/*IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
+		foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
+		{	Type t = item.GetType();
+			PropertyInfo[] pia = t.GetProperties();
+			//Logger.Log(LogLevel.UserInfo, String.Format("GammaCor={0}", item.GammaCorrection));
+			foreach (PropertyInfo pi in pia)
+			{
+				Logger.Log(LogLevel.UserInfo, String.Format("Name={0},Property {1}", item.Identifier,
+						pi.ToString()));
+			}
+			MemberInfo[] ms = t.GetMembers();
+			foreach (MemberInfo mi in ms)
+			{
+			Logger.Log(LogLevel.UserInfo, String.Format("Name={0}, Member {1}", item.Identifier,
+						mi.ToString()));
+			}
+		}*/
+	}
+	private static string mGetDetectorIdentifier(string name)
+	{
+		string ret="";
+		foreach (string detname in DETECTOR_NAMES)
+		{
+			string[] args=detname.Split(',');
+			if(args[1]==name)
+			{		
+                ret=args[0];
+                break;
+			}
+		}
+		return ret;
+	}
 	//adapted from http://www.dotnetperls.com/array-slice
 	private static string[] Slice(string[] source, int start, int end)
     {
 	// Handles negative ends.
-	if (end < 0)
+	if (end <= 0)
 	{
 	    end = source.Length + end;
 	}
