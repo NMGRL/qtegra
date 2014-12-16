@@ -83,7 +83,7 @@ class RemoteControl
         GetTuningSettings();
         PrepareEnvironment();
         
-        //mReportGains();
+        mReportGains();
     
         //list attributes
         //listattributes(Instrument.GetType(), "instrument");
