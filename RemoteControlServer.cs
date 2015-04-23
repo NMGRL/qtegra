@@ -186,6 +186,10 @@ class RemoteControl
 		double r;
 		switch (args[0]) {
 
+        case "GetParameters":
+            result = GetParameters(args);
+            break;
+
 		case "GetTuningSettingsList":
 			result = GetTuningSettings();
 			break;
@@ -376,7 +380,8 @@ class RemoteControl
 				result=r.ToString();
 			}
 			break;
-			
+
+
 		case "SetTrapVoltage":
 			result=SetParameter("Trap Voltage Set",Convert.ToDouble(args[1]));
 			break;
@@ -551,6 +556,58 @@ class RemoteControl
 //====================================================================================================================================
 //Qtegra Methods
 //====================================================================================================================================
+    public static string GetParameters(List<string> keys):
+    {
+        List<string> data = new List<string>();
+        double v;
+        string param;
+        foreach(string k in keys)
+        {
+           param="";
+           switch (k) {
+           case "YSymmetry":
+                param='Y-Symmetry Set';
+                break;
+           case "ZSymmetry":
+                param='Z-Symmetry Set';
+                break;
+           case "HighVoltage":
+                param='Acceleration Reference Set';
+                break;
+           case "HV":
+                param='Acceleration Reference Set';
+                break;
+		   case "TrapVoltage":
+                param='Trap Voltage Readback';
+		        break;
+	       case "ElectronEnergy":
+                param='Electron Energy Readback';
+	            break;
+           case "ZFocus":
+                param='Z-Focus Set';
+                break;
+           case "IonRepeller":
+                param='Ion Repeller Set';
+                break;
+           case "ExtractionLens":
+                param='Extraction Lens Set';
+                break;
+           }
+
+           if (not param == "")
+           {
+               Instrument.GetParameter(param, out v);
+           }
+           else
+           {
+                v = 0;
+           }
+           data.Add(v.ToString());
+        }
+
+        return string.Join(",",data.ToArray());
+
+    }
 	public static string mActivateCup(string a, string b)
     {
     	string result;
