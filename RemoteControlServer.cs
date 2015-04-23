@@ -507,7 +507,9 @@ class RemoteControl
             result=SetParameter(pargs[0], Convert.ToDouble(pargs[1]));
             break;
         }
+        if(cmd!="GetData"){
         log(String.Format("{0} => {1}", cmd, result));
+        }
         return result;
     }
 //============================================================================================
