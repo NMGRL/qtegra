@@ -811,7 +811,6 @@ class RemoteControl
 	}
 	public static void ScanDataAvailable(object sender, EventArgs<Spectrum> e)
 	{ 
-	
 		lock(m_lock)
 		{
 			
@@ -821,7 +820,7 @@ class RemoteControl
 	
 			// change detnames to a list of detectors on your system
 			// this is is for an Argus VI c. 2010
-			;
+			
 			double cddMass=0;
 			double cddCounts=0;
 			bool cdd=false;
@@ -882,7 +881,6 @@ class RemoteControl
 			}
 			
 			SCAN_DATA=string.Join(",",data.ToArray());
-			
 		}
 	}
 	
