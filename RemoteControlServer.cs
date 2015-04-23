@@ -556,45 +556,46 @@ class RemoteControl
 //====================================================================================================================================
 //Qtegra Methods
 //====================================================================================================================================
-    public static string GetParameters(List<string> keys):
+    public static string GetParameters(string[] args)
     {
         List<string> data = new List<string>();
         double v;
         string param;
-        foreach(string k in keys)
+        foreach(string k in args[1].Split(','))
         {
            param="";
            switch (k) {
            case "YSymmetry":
-                param='Y-Symmetry Set';
+                param="Y-Symmetry Set";
                 break;
            case "ZSymmetry":
-                param='Z-Symmetry Set';
+                param="Z-Symmetry Set";
                 break;
            case "HighVoltage":
-                param='Acceleration Reference Set';
+                param="Acceleration Reference Set";
                 break;
            case "HV":
-                param='Acceleration Reference Set';
+                param="Acceleration Reference Set";
                 break;
 		   case "TrapVoltage":
-                param='Trap Voltage Readback';
+                param="Trap Voltage Readback";
 		        break;
 	       case "ElectronEnergy":
-                param='Electron Energy Readback';
+                param="Electron Energy Readback";
 	            break;
            case "ZFocus":
-                param='Z-Focus Set';
+                param="Z-Focus Set";
                 break;
            case "IonRepeller":
-                param='Ion Repeller Set';
+                param="Ion Repeller Set";
                 break;
            case "ExtractionLens":
-                param='Extraction Lens Set';
+                param="Extraction Lens Set";
                 break;
            }
-
-           if (not param == "")
+           //log(param);
+		   //log(k);
+           if (param != "")
            {
                Instrument.GetParameter(param, out v);
            }
