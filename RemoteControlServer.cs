@@ -563,15 +563,13 @@ class RemoteControl
 //====================================================================================================================================
     public static string GetDeflections(string[] args)
     {
-        string[] data;
+        List<string> data = new List<string>();
         double v;
-        string param;
+
         string dets = String.Join(" ", Slice(args,1,0));
 
         foreach(string k in dets.Split(','))
         {
-
-            param = "";
             if(!Instrument.GetParameter(String.Format("Deflection {0} Set", k), out v))
             {
                 v = 0;
@@ -579,7 +577,7 @@ class RemoteControl
             data.Add(v.ToString());
         }
 
-        return string.Join(",",data);
+        return string.Join(",",data.ToArray());
     }
     public static string GetParameters(string[] args)
     {
