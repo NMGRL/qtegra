@@ -163,6 +163,7 @@ class RemoteControl
 	//      GetIonCounterVoltage
 	//      SetIonCounterVoltage <value>
 	//      GetGain <name>
+	//      GetDeflections <name>[,<name>,...]
 	//==================================================================
 	//		Error Responses:
 	//			Error: Invalid Command   - the command is poorly formated or does not exist. 
@@ -171,6 +172,7 @@ class RemoteControl
     //==========Generic Device===============================================
 	//      GetParameter <name> -  name is any valid device currently listed in the hardware database
 	//      SetParameter <name>,<value> -  name is any valid device currently listed in the hardware database
+	//      GetParameters <name>[,<name>,...]
 	//====================================================================================================================================
 	
 	private static string ParseAndExecuteCommand (string cmd)
@@ -186,6 +188,9 @@ class RemoteControl
 		double r;
 		switch (args[0]) {
 
+        case "GetDeflections":
+            result = GetDeflections(args);
+            break;
         case "GetParameters":
             result = GetParameters(args);
             break;
@@ -556,6 +561,26 @@ class RemoteControl
 //====================================================================================================================================
 //Qtegra Methods
 //====================================================================================================================================
+    public static string GetDeflections(string[] args)
+    {
+        string[] data;
+        double v;
+        string param;
+        string dets = String.Join(" ", Slice(args,1,0));
+
+        foreach(string k in dets.Split(','))
+        {
+
+            param = "";
+            if(!Instrument.GetParameter(String.Format("Deflection {0} Set", k), out v))
+            {
+                v = 0;
+            }
+            data.Add(v.ToString());
+        }
+
+        return string.Join(",",data);
+    }
     public static string GetParameters(string[] args)
     {
         List<string> data = new List<string>();
