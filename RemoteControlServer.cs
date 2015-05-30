@@ -18,7 +18,7 @@ under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 
-__version__=2.1
+__version__=2.1.1
 */
 using System.IO;
 using System.Text;
@@ -321,17 +321,22 @@ class RemoteControl
         case "Open":
         	Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
 			//hardcode name for now
-			result=SetParameter("Valve Ion Pump Set",OPEN);
+			jargs=String.Join(" ", Slice(args,1,0));
+
+//			result=SetParameter("Valve Ion Pump Set",OPEN);
+			result=SetParameter(jargs,OPEN);
 			break;
 			
 		case "Close":
 			Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
-			result=SetParameter("Valve Ion Pump Set",CLOSE);
+			result=SetParameter(jargs,CLOSE);
 			break;
 			
 		case "GetValveState":
 			Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
-			result=GetValveState("Valve Ion Pump Set");
+
+			jargs=String.Join(" ", Slice(args,1,0));
+			result=GetValveState(jargs); //"Valve Ion Pump Set"
 			Logger.Log(LogLevel.Debug, String.Format("Valve state {0}", result));
 			break;
 
@@ -506,7 +511,8 @@ class RemoteControl
 //    Generic
 //============================================================================================			
 		case "GetParameter":
-			if(Instrument.GetParameter(args[1], out r))
+		    jargs=String.Join(" ", Slice(args,1,0));
+			if(Instrument.GetParameter(jargs, out r))
 			{
 				result=r.ToString();
 			}
