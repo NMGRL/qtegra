@@ -328,6 +328,7 @@ class RemoteControl
 			break;
 			
 		case "Close":
+			jargs=String.Join(" ", Slice(args,1,0));
 			Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
 			result=SetParameter(jargs,CLOSE);
 			break;
