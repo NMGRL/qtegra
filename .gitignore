@@ -86,4 +86,6 @@ local.properties
 # TeXlipse plugin
 .texlipse
 
+*.cs.ext
+
 
