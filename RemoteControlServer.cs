@@ -520,7 +520,8 @@ class RemoteControl
 			break;
 			
 		case "SetParameter":
-		    pargs=args[1].Split(',');
+		    jargs=String.Join(" ", Slice(args,1,0));
+            pargs=jargs.Split(',');
 		    result=SetParameter(pargs[0], Convert.ToDouble(pargs[1]));
 		    break;
 		}
