@@ -331,9 +331,7 @@ class RemoteControl
 //============================================================================================                  
         case "GetMagnetDAC":
             if (Instrument.GetParameter("Field Set", out r))
-            {
-                result=r.ToString();
-            }
+            {result=r.ToString();}
             break;
             
         case "SetMagnetDAC":        
@@ -352,9 +350,7 @@ class RemoteControl
 //============================================================================================          
         case "GetHighVoltage":
             if(Instrument.GetParameter("Acceleration Reference Set",out r))
-            {
-                result=(r*1000).ToString();
-            }
+            { result=(r*1000).ToString(); }
             break;
             
         case "SetHighVoltage":
@@ -362,9 +358,7 @@ class RemoteControl
             break;
         case "GetHV":
             if(Instrument.GetParameter("Acceleration Reference Set",out r))
-            {
-                result=(r).ToString();
-            }
+            { result=(r).ToString(); }
             break;
             
         case "SetHV":
@@ -372,9 +366,7 @@ class RemoteControl
             break;
         case "GetTrapVoltage":
             if(Instrument.GetParameter("Trap Voltage Readback",out r))
-            {
-                result=r.ToString();
-            }
+            { result=r.ToString(); }
             break;
             
         case "SetTrapVoltage":
@@ -383,9 +375,7 @@ class RemoteControl
         
         case "GetElectronEnergy":
             if(Instrument.GetParameter("Electron Energy Readback",out r))
-            {
-                result=r.ToString();
-            }
+            { result=r.ToString(); }
             break;
             
         case "SetElectronEnergy":
@@ -394,9 +384,7 @@ class RemoteControl
             
         case "GetIonRepeller":
             if(Instrument.GetParameter("Ion Repeller Set",out r))
-            {
-                result=r.ToString();
-            }
+            { result=r.ToString(); }
             break;
             
         case "SetIonRepeller":
@@ -405,9 +393,7 @@ class RemoteControl
         
         case "GetYSymmetry":
             if(Instrument.GetParameter("Y-Symmetry Set",out r))
-            {
-                result=r.ToString();
-            }
+            { result=r.ToString(); }
             break;
             
         case "SetYSymmetry":
@@ -417,9 +403,7 @@ class RemoteControl
         
         case "GetZSymmetry":
             if(Instrument.GetParameter("Z-Symmetry Set",out r))
-            {
-                result=r.ToString();
-            }
+            { result=r.ToString(); }
             break;
             
         case "SetZSymmetry":
@@ -428,9 +412,7 @@ class RemoteControl
             
         case "GetZFocus":
             if(Instrument.GetParameter("Z-Focus Set",out r))
-            {
-                result=r.ToString();
-            }
+            { result=r.ToString(); }
             break;
         
         case "SetZFocus":
@@ -439,9 +421,7 @@ class RemoteControl
         
         case "GetExtractionLens":
             if(Instrument.GetParameter("Extraction Lens Set",out r))
-            {
-                result=r.ToString();
-            }
+            { result=r.ToString(); }
             break;
             
         case "SetExtractionLens":
@@ -460,9 +440,7 @@ class RemoteControl
         case "GetDeflection":
             jargs=String.Join(" ", Slice(args,1,0));
             if(Instrument.GetParameter(String.Format("Deflection {0} Set",jargs), out r))
-            {
-                result=r.ToString();
-            }
+            {result=r.ToString();}
             break;
             
         case "SetDeflection":
@@ -473,42 +451,43 @@ class RemoteControl
             
         case "GetIonCounterVoltage":
             if(Instrument.GetParameter("CDD Supply Set",out r))
-            {
-                result=r.ToString();
-            }
+            {result=r.ToString();}
             break;
             
         case "SetIonCounterVoltage":
             result=SetParameter("CDD Supply Set", Convert.ToDouble(args[1]));
             break;
+
         case "GetGain":
             jargs=String.Join(" ", Slice(args,1,0));
             result=GetGain(jargs);
             break;
+
         case "SetGain":
             jargs=String.Join(" ", Slice(args,1,0));
             pargs=jargs.Split(',');
-
             result="OK";
             SetGain(pargs[0], Convert.ToDouble(pargs[1]));
             break;
+
 //============================================================================================
 //    Generic
 //============================================================================================          
         case "GetParameter":
-            if(Instrument.GetParameter(args[1], out r))
-            {
-                result=r.ToString();
-            }
+            jargs=String.Join(" ", Slice(args,1,0));
+            if(Instrument.GetParameter(jargs, out r))
+            {result=r.ToString();}
             break;
             
         case "SetParameter":
-            pargs=args[1].Split(',');
+            jargs=String.Join(" ", Slice(args,1,0));
+            pargs=jargs.Split(',');
             result=SetParameter(pargs[0], Convert.ToDouble(pargs[1]));
             break;
         }
-        if(cmd!="GetData"){
-        log(String.Format("{0} => {1}", cmd, result));
+        if(cmd!="GetData")
+        {
+            log(String.Format("{0} => {1}", cmd, result));
         }
         return result;
     }
@@ -636,7 +615,6 @@ class RemoteControl
         return result;
         
     }
-    
     public static string SetParameter(string hwname, int val)
     {
         string result="OK";
