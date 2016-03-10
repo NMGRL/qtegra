@@ -37,7 +37,7 @@ using Thermo.Imhotep.Util;
 class RemoteControl
 {
 	private static int m_PORT = 1069;
-	
+
 	private static Socket UDP_SOCK;
 	private static Thread SERVER_THREAD;
 	private static TcpListener TCPLISTENER;
@@ -61,36 +61,42 @@ class RemoteControl
 
 	public const int OPEN = 1;
 	public const int CLOSE = 0;
-	
+
 	public static IRMSBaseCore Instrument;
 	public static IRMSBaseMeasurementInfo m_restoreMeasurementInfo;
 
 	public static string SCAN_DATA;
 	public static object m_lock=new object();
 
-    private static List<string> DETECTOR_NAMES = new List<string>(new string[]{"CUP 4,H2","CUP 3,H1",
-																  "CUP 2,AX",
-																  "CUP 1,L1","CUP 0,L2",
-																  "CDD 0,CDD"
-																  });
+    private static List<string> DETECTOR_NAMES = new List<string>(new string[]{
+			"CUP 4,H2",
+			"CUP 3,H1",
+		  "CUP 2,AX",
+		  "CUP 1,L1",
+			"CUP 0,L2",
+		  "CDD 0,L2CDD",
+			"CDD 1,L1CDD",
+			"CDD 2,AXCDD",
+			"CDD 3,H1CDD",
+			"CDD 4,H2CDD"});
 	public static void Main ()
 	{
-		Instrument= ArgusMC;
-		
+		Instrument= HelixMC;
+
 		//init parameters
 		Instrument.GetParameter("Y-Symmetry Set", out LAST_Y_SYMMETRY);
-		
+
 		GetTuningSettings();
 		PrepareEnvironment();
-		
+
 		//mReportGains();
-	
+
 		//list attributes
 		//listattributes(Instrument.GetType(), "instrument");
-		
+
         //setup data recording
 		InitializeDataRecord();
-		
+
 		if (USE_UDP)
 		{
 			UDPServeForever();
@@ -99,13 +105,13 @@ class RemoteControl
 		{
 		 	TCPServeForever();
 		}
-		
+
 	}
-	
+
     //====================================================================================================================================
-	// 
+	//
 	//	Commands are case sensitive and in CamelCase
-	//  do not include the "<" or ">" in the commands. 
+	//  do not include the "<" or ">" in the commands.
 	//  e.g SetTrapVoltage 120 not SetTrapVoltage <120>
 	//	Commands:
 	//		GetTuningSettingsList #return a comma separated string
@@ -114,7 +120,7 @@ class RemoteControl
 	//		SetIntegrationTime <seconds>
 	//      GetIntegrationTime <seconds>
 	// 		BlankBeam <true or false> if true set y-symmetry to -50 else return to previous value
-    
+
     //===========Cup/SubCup Configurations==============================
     // 		GetCupConfigurationList
 	//		GetSubCupConfigurationList
@@ -126,18 +132,18 @@ class RemoteControl
 	//===========Ion Counter============================================
 	//      ActivateIonCounter
 	//      DeactivateIonCounter
-	
+
 	//===========Ion Pump Valve=========================================
     //      Open  #open the Ion pump to the mass spec
 	//		Close #closes the Ion pump to the mass spec
 	//		GetValveState #returns True for open false for close
-	
+
 	//===========Magnet=================================================
 	//		GetMagnetDAC
 	//		SetMagnetDAC <value> #0-10V
 	//      GetMagnetMoving
 	//      SetMass <value>
-	
+
 	//===========Source=================================================
 	//		GetHighVoltage or GetHV
 	//		SetHighVoltage or SetHV <kV>
@@ -155,7 +161,7 @@ class RemoteControl
     //      SetIonRepeller <value>
     //      GetExtractionLens
     //      SetExtractionLens <value>
-    
+
     //==========Detectors===============================================
     //      ProtectDetector <name>,<On/Off>
 	//      GetDeflection <name>
@@ -166,21 +172,21 @@ class RemoteControl
 	//      GetDeflections <name>[,<name>,...]
 	//==================================================================
 	//		Error Responses:
-	//			Error: Invalid Command   - the command is poorly formated or does not exist. 
-	//			Error: could not set <hardware> to <value> 
-	
+	//			Error: Invalid Command   - the command is poorly formated or does not exist.
+	//			Error: could not set <hardware> to <value>
+
     //==========Generic Device===============================================
 	//      GetParameter <name> -  name is any valid device currently listed in the hardware database
 	//      SetParameter <name>,<value> -  name is any valid device currently listed in the hardware database
 	//      GetParameters <name>[,<name>,...]
 	//====================================================================================================================================
-	
+
 	private static string ParseAndExecuteCommand (string cmd)
 	{
-		
+
 		string result = "Error: Invalid Command";
 		//Logger.Log(LogLevel.UserInfo, String.Format("Executing {0}", cmd));
-		
+
 		string[] args = cmd.Trim().Split (' ');
 		string[] pargs;
 		string jargs;
@@ -198,7 +204,7 @@ class RemoteControl
 		case "GetTuningSettingsList":
 			result = GetTuningSettings();
 			break;
-			
+
 		case "SetTuningSettings":
 			if(SetTuningSettings(args[1]))
 			{
@@ -209,26 +215,26 @@ class RemoteControl
 				result=String.Format("Error: could not set tuning settings {0}",args[1]);
 			}
 			break;
-			
+
 		case "GetData":
 			result=SCAN_DATA;
 			break;
-			
+
 		case "SetIntegrationTime":
 			result=SetIntegrationTime(Convert.ToDouble(args[1]));
 			break;
 		case "GetIntegrationTime":
 			result=GetIntegrationTime();
 			break;
-			
+
 		case "BlankBeam":
-		
+
 			if (!USE_BEAM_BLANK)
-			{	
+			{
 				result="OK";
 				break;
 			}
-			
+
 			double yval=LAST_Y_SYMMETRY;
 			bool blankbeam=false;
 			if (args[1].ToLower()=="true")
@@ -251,41 +257,41 @@ class RemoteControl
 					result=SetParameter("Y-Symmetry Set",yval);
 				}
 			}
-			
+
 			result="OK";
 			if(blankbeam)
 			{
 				result=SetParameter("Y-Symmetry Set",yval);
 			}
-		
+
 			break;
-			
+
 //============================================================================================
 //   Cup / SubCup Configurations
-//============================================================================================					
+//============================================================================================
         case "GetCupConfigurationList":
 			List<string> cup_names = GetCupConfigurations ();
 			result = string.Join ("\r", cup_names.ToArray ());
 			break;
-		
+
 		case "GetSubCupConfigurationList":
 			string config_name = args[1];
 			List<string> sub_names = GetSubCupConfigurations (config_name);
 			result = string.Join ("\r", sub_names.ToArray ());
 			break;
-			
+
 		case "GetActiveCupConfiguration":
 			result=Instrument.CupConfigurationDataList.GetActiveCupConfiguration().Name;
 			break;
-			
+
 		case "GetActiveSubCupConfiguration":
 			result=Instrument.CupConfigurationDataList.GetActiveSubCupConfiguration().Name;
 			break;
-			
+
 		case "GetSubCupParameters":
 			result=GetSubCupParameters();
 			break;
-			
+
 		case "SetSubCupConfiguration":
 //			Logger.Log(LogLevel.Debug, String.Format("Set SupCup {0}",cmd));
 //			if(ActivateCupConfiguration ("Argon", cmd.Remove(0,23)))
@@ -305,7 +311,7 @@ class RemoteControl
             break;
 //============================================================================================
 //   Ion Counter
-//============================================================================================					
+//============================================================================================
 		case "ActivateIonCounter":
 			result="OK";
 			SetIonCounterState(true);
@@ -314,10 +320,10 @@ class RemoteControl
 			result="OK";
 			SetIonCounterState(false);
 			break;
-			
+
 //============================================================================================
 //   Ion Pump Valve
-//============================================================================================					
+//============================================================================================
         case "Open":
         	Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
 			//hardcode name for now
@@ -326,13 +332,13 @@ class RemoteControl
 //			result=SetParameter("Valve Ion Pump Set",OPEN);
 			result=SetParameter(jargs,OPEN);
 			break;
-			
+
 		case "Close":
 			jargs=String.Join(" ", Slice(args,1,0));
 			Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
 			result=SetParameter(jargs,CLOSE);
 			break;
-			
+
 		case "GetValveState":
 			Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
 
@@ -343,15 +349,15 @@ class RemoteControl
 
 //============================================================================================
 //   Magnet
-//============================================================================================					
+//============================================================================================
 		case "GetMagnetDAC":
 			if (Instrument.GetParameter("Field Set", out r))
 			{
 				result=r.ToString();
 			}
 			break;
-			
-		case "SetMagnetDAC":		
+
+		case "SetMagnetDAC":
 			result=SetMagnetDAC(Convert.ToDouble(args[1]));
 			break;
 		case "GetMagnetMoving":
@@ -364,14 +370,14 @@ class RemoteControl
 		    break;
 //============================================================================================
 //    Source Parameters
-//============================================================================================			
+//============================================================================================
 		case "GetHighVoltage":
 			if(Instrument.GetParameter("Acceleration Reference Set",out r))
 			{
 				result=(r*1000).ToString();
 			}
 			break;
-			
+
 		case "SetHighVoltage":
 			result=SetParameter("Acceleration Reference Set", Convert.ToDouble(args[1])/1000.0);
 			break;
@@ -381,7 +387,7 @@ class RemoteControl
 				result=(r).ToString();
 			}
 			break;
-			
+
 		case "SetHV":
 			result=SetParameter("Acceleration Reference Set", Convert.ToDouble(args[1])/1000.0);
 			break;
@@ -396,77 +402,77 @@ class RemoteControl
 		case "SetTrapVoltage":
 			result=SetParameter("Trap Voltage Set",Convert.ToDouble(args[1]));
 			break;
-		
+
 		case "GetElectronEnergy":
 			if(Instrument.GetParameter("Electron Energy Readback",out r))
 			{
 				result=r.ToString();
 			}
 			break;
-			
+
 		case "SetElectronEnergy":
 			result=SetParameter("Electron Energy Set",Convert.ToDouble(args[1]));
 			break;
-			
+
 		case "GetIonRepeller":
 			if(Instrument.GetParameter("Ion Repeller Set",out r))
 			{
 				result=r.ToString();
 			}
 			break;
-			
+
 		case "SetIonRepeller":
 			result=SetParameter("Ion Repeller Set",Convert.ToDouble(args[1]));
 			break;
-		
+
 		case "GetYSymmetry":
 			if(Instrument.GetParameter("Y-Symmetry Set",out r))
 			{
 				result=r.ToString();
 			}
 			break;
-			
+
 		case "SetYSymmetry":
 			LAST_Y_SYMMETRY=Convert.ToDouble(args[1]);
 			result=SetParameter("Y-Symmetry Set",Convert.ToDouble(args[1]));
 			break;
-		
+
 		case "GetZSymmetry":
 			if(Instrument.GetParameter("Z-Symmetry Set",out r))
 			{
 				result=r.ToString();
 			}
 			break;
-			
+
 		case "SetZSymmetry":
 			result=SetParameter("Z-Symmetry Set",Convert.ToDouble(args[1]));
 			break;
-			
+
 		case "GetZFocus":
 			if(Instrument.GetParameter("Z-Focus Set",out r))
 			{
 				result=r.ToString();
 			}
 			break;
-		
+
 		case "SetZFocus":
 			result=SetParameter("Z-Focus Set",Convert.ToDouble(args[1]));
 			break;
-		
+
 		case "GetExtractionLens":
 			if(Instrument.GetParameter("Extraction Lens Set",out r))
 			{
 				result=r.ToString();
 			}
 			break;
-			
+
 		case "SetExtractionLens":
 			result=SetParameter("Extraction Lens Set",Convert.ToDouble(args[1]));
 			break;
-		
+
 //============================================================================================
 //    Detectors
-//============================================================================================			
+//============================================================================================
         case "ProtectDetector":
             pargs=args[1].Split(',');
             ProtectDetector(pargs[0], pargs[1]);
@@ -480,20 +486,20 @@ class RemoteControl
                 result=r.ToString();
             }
             break;
-            
+
         case "SetDeflection":
             jargs=String.Join(" ", Slice(args,1,0));
             pargs=jargs.Split(',');
 			result=SetParameter(String.Format("Deflection {0} Set",pargs[0]),Convert.ToDouble(pargs[1]));
 		    break;
-		    
+
 		case "GetIonCounterVoltage":
             if(Instrument.GetParameter("CDD Supply Set",out r))
             {
                 result=r.ToString();
             }
             break;
-            
+
         case "SetIonCounterVoltage":
         	result=SetParameter("CDD Supply Set", Convert.ToDouble(args[1]));
             break;
@@ -510,7 +516,7 @@ class RemoteControl
 		    break;
 //============================================================================================
 //    Generic
-//============================================================================================			
+//============================================================================================
 		case "GetParameter":
 		    jargs=String.Join(" ", Slice(args,1,0));
 			if(Instrument.GetParameter(jargs, out r))
@@ -518,7 +524,7 @@ class RemoteControl
 				result=r.ToString();
 			}
 			break;
-			
+
 		case "SetParameter":
 		    jargs=String.Join(" ", Slice(args,1,0));
             pargs=jargs.Split(',');
@@ -530,7 +536,7 @@ class RemoteControl
 	}
 //============================================================================================
 //    EOCommands
-//============================================================================================          
+//============================================================================================
 
 
 	private static bool PrepareEnvironment()
@@ -538,34 +544,34 @@ class RemoteControl
         m_restoreMeasurementInfo=Instrument.MeasurementInfo;
         return Instrument.ScanTransitionController.InitializeScriptScan(m_restoreMeasurementInfo);
     }
-      
+
 	public static void InitializeDataRecord()
 	{
 		// attach a handler to the ScanDataAvailable Event
 		Instrument.ScanDataAvailable+=ScanDataAvailable;
 	}
-	
+
 	public static void Dispose()
 	{
 		Logger.Log (LogLevel.UserInfo, "Stop Server");
-	
+
 		// deattach the handler from the ScanDataAvailable Event
 		Instrument.ScanDataAvailable-=ScanDataAvailable;
-		
+
 		//shutdown the server
 		if (USE_UDP)
 		{
-			UDP_SOCK.Close();			
+			UDP_SOCK.Close();
 		}
 		else
 		{
 			TCPLISTENER.Stop();
 		}
-		
+
 		SERVER_THREAD.Abort();
 
 	}
-	
+
 //====================================================================================================================================
 //Qtegra Methods
 //====================================================================================================================================
@@ -663,7 +669,7 @@ class RemoteControl
 		{
 			return "False";
 		}
-		
+
 	}
 	public static void ProtectDetector(string detname, string state)
 	{
@@ -704,7 +710,7 @@ class RemoteControl
 		}
 
 	}
-	
+
 	public static string GetValveState(string hwname)
 	{
 		string result="Error";
@@ -721,9 +727,9 @@ class RemoteControl
 			}
 		}
 		return result;
-		
+
 	}
-	
+
 	public static string SetParameter(string hwname, int val)
 	{
 		string result="OK";
@@ -735,30 +741,30 @@ class RemoteControl
 	}
 	public static string SetParameter(string hwname, double val)
 	{	string result="OK";
-	
-	
+
+
 		if (!Instrument.SetParameter(hwname, val))
 		{
 			result=String.Format("Error: could not set {0} to {1}", hwname, val);
 		}
 		return result;
 	}
-	
-	
+
+
 	public static string SetMagnetDAC(double d)
 	{
-		
+
 		string result="OK";
 		double current_dac;
-		
+
 		if (Instrument.GetParameter("Field Set", out current_dac))
 		{
-			double dev=Math.Abs(d-current_dac);			
+			double dev=Math.Abs(d-current_dac);
 			if (dev>MAGNET_MOVE_THRESHOLD)
-			{   
+			{
                 Thread t= new Thread(delegate(){mSetMagnetDAC(d,dev,current_dac);});
                 t.Start();
-                
+
                 result="OK";
 			}
 			else
@@ -767,9 +773,9 @@ class RemoteControl
 			}
 		}
 		return result;
-		
+
 	}
-	
+
 	public static void mSetMagnetDAC(double d, double dev, double current_dac)
 	{
 		MAGNET_MOVING=true;
@@ -808,10 +814,10 @@ class RemoteControl
 			Logger.Log(LogLevel.UserError, "Could not start the modified monitor");
 			result=String.Format("Error: could not set integration time to {0}",t);
 		}
-		
+
 		return result;
 	}
-	
+
 	public static void SetGain(String name, double v)
 	{
 		string id = mGetDetectorIdentifier(name);
@@ -823,7 +829,7 @@ class RemoteControl
 	        	break;
 	        }
 	    }
-	    
+
 	}
 	public static string GetGain(String name)
 	{
@@ -841,17 +847,17 @@ class RemoteControl
 	    return String.Format("{0}",gain);
 	}
 	public static void ScanDataAvailable(object sender, EventArgs<Spectrum> e)
-	{ 
+	{
 		lock(m_lock)
 		{
-			
+
 			List<string> data = new List<string>();
 			Spectrum spec = e.Value.Clone() as Spectrum;
 			IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
-	
+
 			// change detnames to a list of detectors on your system
 			// this is is for an Argus VI c. 2010
-			
+
 			double cddMass=0;
 			double cddCounts=0;
 			bool cdd=false;
@@ -859,7 +865,7 @@ class RemoteControl
 			{
 				foreach (SpectrumData point in series)
 				{
-				
+
 					//get the name of the detector
 					foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
 					{
@@ -877,7 +883,7 @@ class RemoteControl
 							//delegate adding the CDD value until later
 							//this way its easy to put a the end of the data string
 							//
-							// cddMass and cddCounts should be changed to lists 
+							// cddMass and cddCounts should be changed to lists
 							// to handle mulitple CDD's for one machine
 							//
 							if( cupName=="CDD")
@@ -887,13 +893,13 @@ class RemoteControl
 								cddCounts=point.Analog;
 							}
 							else
-							{								
+							{
 								data.Add(point.Analog.ToString());
 								if (TAG_DATA)
 								{
 									data.Add(cupName);
 								}
-								
+
 							}
 							break;
 						}
@@ -910,15 +916,15 @@ class RemoteControl
 				}
 				data.Add(cddCounts.ToString());
 			}
-			
+
 			SCAN_DATA=string.Join(",",data.ToArray());
 		}
 	}
-	
+
 	private static bool RunMonitorScan (double? mass)
 	{
 		IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
-		IRMSBaseMeasurementInfo newMeasurementInfo = 
+		IRMSBaseMeasurementInfo newMeasurementInfo =
 			new IRMSBaseMeasurementInfo(
 				Instrument.MeasurementInfo.ScanType,
 				Instrument.MeasurementInfo.IntegrationTime,
@@ -930,19 +936,19 @@ class RemoteControl
 		Instrument.ScanTransitionController.StartMonitoring(newMeasurementInfo);
 		return true;
 	}
-	
+
 	private static string GetTuningSettings()
 	{
 		TuneSettingsManager tsm = new TuneSettingsManager(Instrument.Id);
 		List<string> result = new List<string>();
 		tsm.EntryType= typeof(TuneSettings);
 		result.AddRange(tsm.GetEntries());
-		return string.Join(",",result.ToArray());	
+		return string.Join(",",result.ToArray());
 	}
-	
+
 	private static bool SetTuningSettings(string name)
 	{
-		
+
 		TuneSettingsManager tsm = new TuneSettingsManager(Instrument.Id);
 		TuneSettings tuneSettings = tuneSettings = tsm.ReadEntry(name) as TuneSettings; ;
 		//TuneSettings tuneSettings =tsm.ReadEntry(name);
@@ -968,9 +974,9 @@ class RemoteControl
 		}
 		return true;
 	}
-	
+
 	private static string GetSubCupParameters()
-	{	
+	{
 	    // change parameters to values relevant for your system
 	    // default is Argus VI c. 2010
 		List<string> parameters = new List<string>(new string[]{
@@ -1021,16 +1027,16 @@ class RemoteControl
 			Logger.Log (LogLevel.UserError, String.Format ("Could not find cup configuration \'{0}\'.", cupConfigurationName));
 			return null;
 		}
-		
+
 		List<string> result = new List<string>();
 		foreach (var item in cupData.SubCupConfigurationList) {
 			result.Add (item.Name);
 		}
-		
+
 
 		return result;
 	}
-	
+
 	//-------------------------------------------------------------------------------------------------------------------------------------------------------------
 	// <summary>
 	// Activate a cup configuration and sub cup configuration.
@@ -1042,7 +1048,7 @@ class RemoteControl
 	//-------------------------------------------------------------------------------------------------------------------------------------------------------------
 	private static bool ActivateCupConfiguration (string cupConfigurationName, string subCupConfigurationName)
 	{
-		
+
 		//Console.WriteLine (cupConfigurationName);
 		//Console.WriteLine (subCupConfigurationName);
 		IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.FindCupConfigurationByName (cupConfigurationName);
@@ -1064,9 +1070,9 @@ class RemoteControl
 		}
 		return true;
 	}
-	
-	
-	
+
+
+
 //====================================================================================================================================
 //Server Methods
 //====================================================================================================================================
@@ -1076,81 +1082,81 @@ class RemoteControl
 		Logger.Log (LogLevel.UserInfo, "Starting TCP Server.");
 		TCPLISTENER = new TcpListener (IPAddress.Any, m_PORT);
 		TCPLISTENER.Start ();
-		
-		
+
+
 		SERVER_THREAD = new Thread (new ThreadStart (TCPListen));
 		SERVER_THREAD.Start ();
-		
+
 	}
 	private static void UDPServeForever()
 	{
 		Logger.Log (LogLevel.UserInfo, "Starting UDP Server.");
 		SERVER_THREAD = new Thread (new ThreadStart (UDPListen));
 		SERVER_THREAD.Start ();
-		
+
 	}
 	private static void UDPListen()
 	{
 		Logger.Log (LogLevel.UserInfo, "UDP Listening.");
 		int recv;
 		byte[] data= new byte[1024];
-		
+
 		IPEndPoint ipep = new IPEndPoint(IPAddress.Any, m_PORT);
 		UDP_SOCK = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 		UDP_SOCK.Bind(ipep);
-		
+
 		IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
 		EndPoint remote = (EndPoint)(sender);
-		
+
 		while(true)
 		{
 			try
 			{
 				recv=UDP_SOCK.ReceiveFrom(data, ref remote);
 				string rdata = Encoding.ASCII.GetString(data,0, recv);
-				
+
 				string result = ParseAndExecuteCommand(rdata.Trim());
-				
+
 				//Logger.Log(LogLevel.Debug, String.Format("Sending back {0}", result));
 				UDP_SOCK.SendTo(Encoding.ASCII.GetBytes(result), remote);
 			} catch (Exception e) {
 			string error = string.Format ("Could not read from UDP sock. {0}", e.ToString ());
 			Logger.Log(LogLevel.Warning, error);
 			}
-			
+
 		}
 	}
 	private static void TCPListen ()
 	{
-		
+
 		Logger.Log (LogLevel.UserInfo, "TCP Listening");
-		
+
 		while (true) {
 			TCPHandle(TCPLISTENER.AcceptTcpClient ());
-			
+
 			//TcpClient client = TCPLISTENER.AcceptTcpClient ();
 			//Thread clientThread = new Thread (new ParameterizedThreadStart (TCPHandle));
 			//clientThread.Start (client);
 		}
 	}
-	
+
 	private static void TCPHandle (TcpClient tcpClient)
 	{
 		//TcpClient tcpClient = (TcpClient)client;
-		
+
 		NetworkStream _stream = tcpClient.GetStream ();
 		//string response = Read (_stream);
-		
+
 		string result = ParseAndExecuteCommand (TCPRead(_stream).Trim());
-		
+
 		TCPWrite(_stream, result);
-		
+
 		tcpClient.Close();
 	}
 	//====================================================================================================================================
 	//Network Methods
 	//====================================================================================================================================
-	
+
 	private static void TCPWrite (NetworkStream stream, string cmd)
 	{
 		if (stream.CanWrite) {
@@ -1158,7 +1164,7 @@ class RemoteControl
 			stream.Write (sendBytes, 0, sendBytes.Length);
 		}
 	}
-	
+
 	private static string TCPRead (NetworkStream stream)
 	{
 		int BufferSize = 1024;
@@ -1166,16 +1172,16 @@ class RemoteControl
 		try {
 			StringBuilder myCompleteMessage = new StringBuilder ();
 			int numberOfBytesRead = 0;
-			
+
 			// Incoming message may be larger than the buffer size.
 			do {
 				numberOfBytesRead = stream.Read (data, 0, data.Length);
-				
+
 				myCompleteMessage.AppendFormat ("{0}", Encoding.ASCII.GetString (data, 0, numberOfBytesRead));
 			} while (stream.DataAvailable);
-			
+
 			//string rd = string.Format ("Read Data: {0} the received text is '{1}'", numberOfBytesRead, myCompleteMessage);
-			
+
 			return myCompleteMessage.ToString ();
 		} catch (Exception e) {
 			string error = string.Format ("Could not read from the NetworkStream. {0}", e.ToString ());
@@ -1183,8 +1189,8 @@ class RemoteControl
 		}
 		return string.Empty;
 	}
-	
-	
+
+
 	//====================================================================================================================================
 	//Helper Methods
 	//====================================================================================================================================
@@ -1241,7 +1247,7 @@ class RemoteControl
 		{
 			string[] args=detname.Split(',');
 			if(args[1]==name)
-			{		
+			{
                 ret=args[0];
                 break;
 			}
@@ -1267,5 +1273,3 @@ class RemoteControl
 	return res;
     }
 }
-
-
