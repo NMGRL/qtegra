@@ -690,16 +690,28 @@ class RemoteControl
 
 	    }
 	}
-	public static void SetIonCounterState(bool state)
+	public static void SetIonCounterState(string name, bool state)
 	{
-		if (state)
-		{
-			Logger.Log (LogLevel.UserInfo, "Setting IonCounterState True");
-		}
-		else
-		{
-			Logger.Log (LogLevel.UserInfo, "Setting IonCounterState False");
-		}
+//		if (state)
+//		{
+//			Logger.Log (LogLevel.UserInfo, "Setting IonCounterState True");
+//		}
+//		else
+//		{
+//			Logger.Log (LogLevel.UserInfo, "Setting IonCounterState False");
+//		}
+//		IRMSBaseCupConfigurationData activeCupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
+//		foreach(IRMSBaseCollectorItem col in activeCupData.CollectorItemList)
+//		{
+//			if ((col.CollectorType == IRMSBaseCollectorType.CounterCup) && (col.Mass.HasValue == true))
+//			{
+//			    col.Active = state;
+//			}
+//		}
+		List<string> cups = new List<string>();
+		cups.Add(name)
+
+		Instrument.SetCDDActivationMode(new CollectorActivationMode((activate == true) ? DetectorActivateMode.Standby : DetectorActivateMode.Off));
 		IRMSBaseCupConfigurationData activeCupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
 		foreach(IRMSBaseCollectorItem col in activeCupData.CollectorItemList)
 		{
@@ -708,6 +720,20 @@ class RemoteControl
 			    col.Active = state;
 			}
 		}
+        if (state)
+        {
+            Instrument.UnprotectRequiredCounterCups(cups)
+//			List<string> cupNames = activeCupData.CollectorItemList.Where(col => col.Active).Select(c => c.Appearance.Label).ToList();
+//			if (cupNames.Count > 0)
+//			{
+//				Instrument.UnprotectRequiredCounterCups(cupNames);
+//			}
+		}
+		else
+		{
+			Instrument.ProtectAllCounterCupsWithPostDelay(Instrument.BaseSettingsData.CounterProtectionPreDelay);
+		}
+	}
 
 	}
 
