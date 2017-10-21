@@ -447,14 +447,14 @@ class RemoteControl
 			break;
 			
 		case "GetZFocus":
-			if(Instrument.GetParameter("Extraction-Focus Set",out r))
+			if(Instrument.GetParameter("Z-Focus Set",out r))
 			{
 				result=r.ToString();
 			}
 			break;
 		
 		case "SetZFocus":
-			result=SetParameter("Extraction-Focus Set",Convert.ToDouble(args[1]));
+			result=SetParameter("Z-Focus Set",Convert.ToDouble(args[1]));
 			break;
 
 		case "GetExtractionFocus":
@@ -469,14 +469,14 @@ class RemoteControl
 			break;
 
 		case "GetExtractionSymmetry":
-			if(Instrument.GetParameter("Extraction-Symmetry Set",out r))
+			if(Instrument.GetParameter("Extraction Symmetry Set",out r))
 			{
 				result=r.ToString();
 			}
 			break;
 
 		case "SetExtractionSymmetry":
-			result=SetParameter("Extraction-Symmetry Set",Convert.ToDouble(args[1]));
+			result=SetParameter("Extraction Symmetry Set",Convert.ToDouble(args[1]));
 			break;
 
 		case "GetExtractionLens":
@@ -646,10 +646,10 @@ class RemoteControl
                 param="Ion Repeller Set";
                 break;
            case "ExtractionFocus":
-                param="Extraction-Focus Set";
+                param="Extraction Focus Set";
                 break;
            case "ExtractionSymmetry":
-                param="Extraction-Symmetry Set";
+                param="Extraction Symmetry Set";
                 break;
            case "ExtractionLens":
                 param="Extraction Lens Set";
@@ -725,38 +725,38 @@ class RemoteControl
 		{
 			Logger.Log (LogLevel.UserInfo, "Setting IonCounterState False");
 		}
-		IRMSBaseCupConfigurationData activeCupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
-		foreach(IRMSBaseCollectorItem col in activeCupData.CollectorItemList)
-		{
-			if ((col.CollectorType == IRMSBaseCollectorType.CounterCup) &&
-			    (col.Mass.HasValue == true)) &&
-			     (get_cup_name(col) == name)
-			{
-			    col.Active = state;
-			}
-		}
-        if (state)
-        {
-            Instrument.UnprotectRequiredCounterCups(cups)
-			List<string> cupNames = activeCupData.CollectorItemList.Where(col => col.Active).Select(c => c.Appearance.Label).ToList();
-			if (cupNames.Count > 0)
-			{
-				Instrument.UnprotectRequiredCounterCups(cupNames);
-			}
-		}
-		else
-		{
-			Instrument.ProtectAllCounterCupsWithPostDelay(Instrument.BaseSettingsData.CounterProtectionPreDelay);
-		}
+//		IRMSBaseCupConfigurationData activeCupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
+//		foreach(IRMSBaseCollectorItem col in activeCupData.CollectorItemList)
+//		{
+//			if ((col.CollectorType == IRMSBaseCollectorType.CounterCup) and (col.Mass.HasValue == true) and (get_cup_name(col) == name))
+//			{
+//			    col.Active = state;
+//			}
+//		}
+//        if (state)
+//        {
+//            Instrument.UnprotectRequiredCounterCups(cups);
+//			List<string> cupNames = activeCupData.CollectorItemList.Where(col => col.Active).Select(c => c.Appearance.Label).ToList();
+//			if (cupNames.Count > 0)
+//			{
+//				Instrument.UnprotectRequiredCounterCups(cupNames);
+//			}
+//		}
+//		else
+//		{
+//			Instrument.ProtectAllCounterCupsWithPostDelay(Instrument.BaseSettingsData.CounterProtectionPreDelay);
+//		}
 
-		if (UpdateMonitorScan(state))
-		{
-		    return "OK";
-		}
-		else
-		{
-		    return "Error"
-		}
+//		if (UpdateMonitorScan(state))
+//		{
+//		    return "OK";
+//		}
+//		else
+//		{
+//		    return "Error";
+//		}
+
+	return "OK";
 	}
 
 
@@ -905,6 +905,7 @@ class RemoteControl
                 return args[1];
             }
         }
+        return "foo";
     }
 	public static void ScanDataAvailable(object sender, EventArgs<Spectrum> e)
 	{ 
@@ -942,23 +943,23 @@ class RemoteControl
 			SCAN_DATA=string.Join(",",data.ToArray());
 		}
 	}
-	private static bool UpdateMonitorScan(bool enable)
-	{
-        IRMSBaseCupConfigurationData config = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
-        IRMSBaseMeasurementInfo monitor_measurement_info = new IRMSBaseMeasurementInfo(
-            Instrument.MeasurementInfo.ScanType,
-            Instrument.MeasurementInfo.IntegrationTime,
-            Instrument.MeasurementInfo.SettlingTime,
-            config.CollectorItemList.GetMasterCollectorItem().Mass.Value,
-            config.CollectorItemList,
-            config.MassCalibration
-        );
-        success = Instrument.ScanTransitionController.StartMonitoring(monitor_measurement_info);
-        success = Instrument.ScanTransitionController.StartMonitoring(monitor_measurement_info);
-        if (!success) Logger.Log(LogLevel.UserError, "Failed to update monitoring.");
-        else if (enable) Logger.Log(LogLevel.UserInfo, "Monitoring has been updated.");
-        return success;
-	}
+//	private static bool UpdateMonitorScan(bool enable)
+//	{
+//        IRMSBaseCupConfigurationData config = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
+//        IRMSBaseMeasurementInfo monitor_measurement_info = new IRMSBaseMeasurementInfo(
+//            Instrument.MeasurementInfo.ScanType,
+//            Instrument.MeasurementInfo.IntegrationTime,
+//            Instrument.MeasurementInfo.SettlingTime,
+//            config.CollectorItemList.GetMasterCollectorItem().Mass.Value,
+//            config.CollectorItemList,
+//            config.MassCalibration
+//        );
+//        success = Instrument.ScanTransitionController.StartMonitoring(monitor_measurement_info);
+//        success = Instrument.ScanTransitionController.StartMonitoring(monitor_measurement_info);
+//        if (!success) Logger.Log(LogLevel.UserError, "Failed to update monitoring.");
+//        else if (enable) Logger.Log(LogLevel.UserInfo, "Monitoring has been updated.");
+//        return success;
+//	}
 	private static bool RunMonitorScan (double? mass)
 	{
 		IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
