@@ -68,15 +68,39 @@ class RemoteControl
     public static string SCAN_DATA;
     public static object m_lock=new object();
 
-    private static List<string> DETECTOR_NAMES = new List<string>(new string[]{"CUP 4,H2","CUP 3,H1",
+    private static bool IS_ARGUS=true;
+    private static List<string> ARGUS_DETECTOR_NAMES = new List<string>(new string[]{"CUP 4,H2","CUP 3,H1",
                                                                   "CUP 2,AX",
                                                                   "CUP 1,L1","CUP 0,L2",
                                                                   "CDD 0,CDD"
                                                                   });
+
+    private static List<string> HELIX_MC_DETECTOR_NAMES = new List<string>(new string[]{"CUP 4,H2","CUP 3,H1",
+																  "CUP 2,AX",
+																  "CUP 1,L1","CUP 0,L2",
+																  "CDD 0,L2(CDD)",
+																  "CDD 1,L1(CDD)",
+																  "CDD 2,AX(CDD)",
+																  "CDD 3,H1(CDD)",
+																  "CDD 4,H2(CDD)"
+																  });
+
+	if (IS_ARGUS){
+	    private static List<string> DETECTOR_NAMES = ARGUS_DETECTOR_NAMES;
+	}else{
+	    private static List<string> DETECTOR_NAMES = HELIX_DETECTOR_NAMES;
+	    }
+
     public static void Main ()
     {
-        Instrument= ArgusMC;
-
+        if (IS_ARGUS)
+        {
+            Instrument= ArgusMC;
+        }
+        else
+        {
+            Instrument= HelixMC;
+        }
         //init parameters
         Instrument.GetParameter("Y-Symmetry Set", out LAST_Y_SYMMETRY);
 
@@ -151,6 +175,10 @@ class RemoteControl
     //      SetZSymmetry <value>
     //      GetZFocus
     //      SetZFocus <value>
+    //      GetExtractionFocus
+    //      SetExtractionFocus <value>
+    //      GetExtractionSymmetry
+    //      SetExtractionSymmetry <value>
     //      GetIonRepeller
     //      SetIonRepeller <value>
     //      GetExtractionLens
@@ -179,7 +207,7 @@ class RemoteControl
 	{
 		
 		string result = "Error: Invalid Command";
-		//Logger.Log(LogLevel.UserInfo, String.Format("Executing {0}", cmd));
+		Logger.Log(LogLevel.UserInfo, String.Format("Executing {0}", cmd));
 		
 		string[] args = cmd.Trim().Split (' ');
 		string[] pargs;
@@ -305,25 +333,20 @@ class RemoteControl
             break;
 //============================================================================================
 //   Ion Counter
-//============================================================================================
-        case "ActivateIonCounter":
-            result="OK";
-            SetIonCounterState(true);
-            break;
-        case "DeactivateIonCounter":
-            result="OK";
-            SetIonCounterState(false);
-            break;
-
+//============================================================================================					
+		case "ActivateIonCounter":
+			result = SetIonCounterState(args[1], true);
+			break;
+		case "DeactivateIonCounter":
+			result = SetIonCounterState(args[1], false);
+			break;
+			
 //============================================================================================
 //   Ion Pump Valve
 //============================================================================================
         case "Open":
         	Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
-			//hardcode name for now
 			jargs=String.Join(" ", Slice(args,1,0));
-
-//			result=SetParameter("Valve Ion Pump Set",OPEN);
 			result=SetParameter(jargs,OPEN);
 			break;
 
@@ -337,7 +360,7 @@ class RemoteControl
 			Logger.Log(LogLevel.Debug, String.Format("Executing {0}", cmd));
 
 			jargs=String.Join(" ", Slice(args,1,0));
-			result=GetValveState(jargs); //"Valve Ion Pump Set"
+			result=GetValveState(jargs);
 			Logger.Log(LogLevel.Debug, String.Format("Valve state {0}", result));
 			break;
 
@@ -450,7 +473,29 @@ class RemoteControl
 		case "SetZFocus":
 			result=SetParameter("Z-Focus Set",Convert.ToDouble(args[1]));
 			break;
-		
+
+		case "GetExtractionFocus":
+			if(Instrument.GetParameter("Extraction Focus Set",out r))
+			{
+				result=r.ToString();
+			}
+			break;
+
+		case "SetExtractionFocus":
+			result=SetParameter("Extraction Focus Set",Convert.ToDouble(args[1]));
+			break;
+
+		case "GetExtractionSymmetry":
+			if(Instrument.GetParameter("Extraction Symmetry Set",out r))
+			{
+				result=r.ToString();
+			}
+			break;
+
+		case "SetExtractionSymmetry":
+			result=SetParameter("Extraction Symmetry Set",Convert.ToDouble(args[1]));
+			break;
+
 		case "GetExtractionLens":
 			if(Instrument.GetParameter("Extraction Lens Set",out r))
 			{
@@ -526,10 +571,9 @@ class RemoteControl
 	}
 //============================================================================================
 //    EOCommands
-//============================================================================================          
+//============================================================================================
 
-
-    private static bool PrepareEnvironment()
+	private static bool PrepareEnvironment()
     {
         m_restoreMeasurementInfo=Instrument.MeasurementInfo;
         return Instrument.ScanTransitionController.InitializeScriptScan(m_restoreMeasurementInfo);
@@ -596,7 +640,7 @@ class RemoteControl
                 param="Y-Symmetry Set";
                 break;
            case "ZSymmetry":
-                param="Z-Symmetry Set";
+                param="Extraction-Symmetry Set";
                 break;
            case "HighVoltage":
                 param="Acceleration Reference Set";
@@ -611,10 +655,16 @@ class RemoteControl
                 param="Electron Energy Readback";
 	            break;
            case "ZFocus":
-                param="Z-Focus Set";
+                param="Extraction-Focus Set";
                 break;
            case "IonRepeller":
                 param="Ion Repeller Set";
+                break;
+           case "ExtractionFocus":
+                param="Extraction Focus Set";
+                break;
+           case "ExtractionSymmetry":
+                param="Extraction Symmetry Set";
                 break;
            case "ExtractionLens":
                 param="Extraction Lens Set";
@@ -678,79 +728,104 @@ class RemoteControl
                 SetParameter(param, m_defl[detname]);
             }
 
-        }
-    }
-    public static void SetIonCounterState(bool state)
-    {
-        if (state)
-        {
-            Logger.Log (LogLevel.UserInfo, "Setting IonCounterState True");
-        }
-        else
-        {
-            Logger.Log (LogLevel.UserInfo, "Setting IonCounterState False");
-        }
-        IRMSBaseCupConfigurationData activeCupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
-        foreach(IRMSBaseCollectorItem col in activeCupData.CollectorItemList)
-        {
-            if ((col.CollectorType == IRMSBaseCollectorType.CounterCup) && (col.Mass.HasValue == true))
-            {
-                col.Active = state;
-            }
-        }
+	    }
+	}
+	public static String SetIonCounterState(String name, bool state)
+	{
+		if (state)
+		{
+			Logger.Log (LogLevel.UserInfo, "Setting IonCounterState True");
+		}
+		else
+		{
+			Logger.Log (LogLevel.UserInfo, "Setting IonCounterState False");
+		}
+//		IRMSBaseCupConfigurationData activeCupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
+//		foreach(IRMSBaseCollectorItem col in activeCupData.CollectorItemList)
+//		{
+//			if ((col.CollectorType == IRMSBaseCollectorType.CounterCup) and (col.Mass.HasValue == true) and (get_cup_name(col) == name))
+//			{
+//			    col.Active = state;
+//			}
+//		}
+//        if (state)
+//        {
+//            Instrument.UnprotectRequiredCounterCups(cups);
+//			List<string> cupNames = activeCupData.CollectorItemList.Where(col => col.Active).Select(c => c.Appearance.Label).ToList();
+//			if (cupNames.Count > 0)
+//			{
+//				Instrument.UnprotectRequiredCounterCups(cupNames);
+//			}
+//		}
+//		else
+//		{
+//			Instrument.ProtectAllCounterCupsWithPostDelay(Instrument.BaseSettingsData.CounterProtectionPreDelay);
+//		}
 
-    }
+//		if (UpdateMonitorScan(state))
+//		{
+//		    return "OK";
+//		}
+//		else
+//		{
+//		    return "Error";
+//		}
 
-    public static string GetValveState(string hwname)
-    {
-        string result="Error";
-        double rawValue;
-        if(Instrument.GetParameter(hwname,out rawValue))
-        {
-            if (rawValue==OPEN)
-            {
-                result="True";
-            }
-            else
-            {
-                result="False";
-            }
-        }
-        return result;
-
-    }
-    public static string SetParameter(string hwname, int val)
-    {
-        string result="OK";
-        if (!Instrument.SetParameter(hwname, val))
-        {
-            result=String.Format("Error: could not set {0} to {1}", hwname, val);
-        }
-        return result;
-    }
-    public static string SetParameter(string hwname, double val)
-    {   string result="OK";
+	return "OK";
+	}
 
 
-        if (!Instrument.SetParameter(hwname, val))
-        {
-            result=String.Format("Error: could not set {0} to {1}", hwname, val);
-        }
-        return result;
-    }
-
-
-    public static string SetMagnetDAC(double d)
-    {
-
-        string result="OK";
-        double current_dac;
-
-        if (Instrument.GetParameter("Field Set", out current_dac))
-        {
-            double dev=Math.Abs(d-current_dac);
-            if (dev>MAGNET_MOVE_THRESHOLD)
-            {
+	public static string GetValveState(string hwname)
+	{
+		string result="Error";
+		double rawValue;
+		if(Instrument.GetParameter(hwname,out rawValue))
+		{
+			if (rawValue==OPEN)
+			{
+				result="True";
+			}
+			else
+			{
+				result="False";
+			}
+		}
+		return result;
+		
+	}
+	
+	public static string SetParameter(string hwname, int val)
+	{
+		string result="OK";
+		if (!Instrument.SetParameter(hwname, val))
+		{
+			result=String.Format("Error: could not set {0} to {1}", hwname, val);
+		}
+		return result;
+	}
+	public static string SetParameter(string hwname, double val)
+	{	string result="OK";
+	
+	
+		if (!Instrument.SetParameter(hwname, val))
+		{
+			result=String.Format("Error: could not set {0} to {1}", hwname, val);
+		}
+		return result;
+	}
+	
+	
+	public static string SetMagnetDAC(double d)
+	{
+		
+		string result="OK";
+		double current_dac;
+		
+		if (Instrument.GetParameter("Field Set", out current_dac))
+		{
+			double dev=Math.Abs(d-current_dac);			
+			if (dev>MAGNET_MOVE_THRESHOLD)
+			{   
                 Thread t= new Thread(delegate(){mSetMagnetDAC(d,dev,current_dac);});
                 t.Start();
                 
@@ -835,6 +910,18 @@ class RemoteControl
 
 	    return String.Format("{0}",gain);
 	}
+    private static string get_cup_name(IRMSBaseCollectorItem item)
+    {
+        foreach (string detname in DETECTOR_NAMES)
+        {
+            string[] args=detname.Split(',');
+            if(args[0]==item.Identifier)
+            {
+                return args[1];
+            }
+        }
+        return "foo";
+    }
 	public static void ScanDataAvailable(object sender, EventArgs<Spectrum> e)
 	{ 
 		lock(m_lock)
@@ -844,52 +931,23 @@ class RemoteControl
 			Spectrum spec = e.Value.Clone() as Spectrum;
 			IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
 
-			// change detnames to a list of detectors on your system
-			// this is is for an Argus VI c. 2010
-
-			double cddMass=0;
-			double cddCounts=0;
-			bool cdd=false;
 			foreach (Series series in spec)
 			{
 				foreach (SpectrumData point in series)
 				{
-				
 					//get the name of the detector
 					foreach (IRMSBaseCollectorItem item in cupData.CollectorItemList)
 					{
 						if (item.Mass==point.Mass)
-						{	string cupName="";
-							foreach (string detname in DETECTOR_NAMES)
+						{	string cupName=get_cup_name(item);
+
+
+							data.Add(point.Analog.ToString());
+							if (TAG_DATA)
 							{
-								string[] args=detname.Split(',');
-								if(args[0]==item.Identifier)
-								{
-									cupName=args[1];
-									break;
-								}
+								data.Add(cupName);
 							}
-							//delegate adding the CDD value until later
-							//this way its easy to put a the end of the data string
-							//
-							// cddMass and cddCounts should be changed to lists 
-							// to handle mulitple CDD's for one machine
-							//
-							if( cupName=="CDD")
-							{
-								cdd=true;
-								cddMass=point.Mass;
-								cddCounts=point.Analog;
-							}
-							else
-							{								
-								data.Add(point.Analog.ToString());
-								if (TAG_DATA)
-								{
-									data.Add(cupName);
-								}
-								
-							}
+
 							break;
 						}
 					}
@@ -897,19 +955,26 @@ class RemoteControl
 				}
 			}
 			data.Reverse();
-			if(cdd)
-			{
-				if (TAG_DATA)
-				{
-					data.Add("CDD");
-				}
-				data.Add(cddCounts.ToString());
-			}
-			
 			SCAN_DATA=string.Join(",",data.ToArray());
 		}
 	}
-	
+//	private static bool UpdateMonitorScan(bool enable)
+//	{
+//        IRMSBaseCupConfigurationData config = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
+//        IRMSBaseMeasurementInfo monitor_measurement_info = new IRMSBaseMeasurementInfo(
+//            Instrument.MeasurementInfo.ScanType,
+//            Instrument.MeasurementInfo.IntegrationTime,
+//            Instrument.MeasurementInfo.SettlingTime,
+//            config.CollectorItemList.GetMasterCollectorItem().Mass.Value,
+//            config.CollectorItemList,
+//            config.MassCalibration
+//        );
+//        success = Instrument.ScanTransitionController.StartMonitoring(monitor_measurement_info);
+//        success = Instrument.ScanTransitionController.StartMonitoring(monitor_measurement_info);
+//        if (!success) Logger.Log(LogLevel.UserError, "Failed to update monitoring.");
+//        else if (enable) Logger.Log(LogLevel.UserInfo, "Monitoring has been updated.");
+//        return success;
+//	}
 	private static bool RunMonitorScan (double? mass)
 	{
 		IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
