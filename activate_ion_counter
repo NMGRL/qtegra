@@ -1,0 +1,30 @@
+///-------------------------------------------------------------------------------------------------------------------------------------------------------------
+/// <summary>
+/// Activate or deactivate counter cups.
+/// </summary>
+/// <param name="activate">If <c>true</c> then activate all counter; otherwise deactivate the counter cups.</param>
+///-------------------------------------------------------------------------------------------------------------------------------------------------------------
+private static void ActivateAllCounterCups(bool activate)
+{
+    Instrument.SetCDDActivationMode(new CollectorActivationMode((activate == true) ? DetectorActivateMode.Standby : DetectorActivateMode.Off));
+    IRMSBaseCupConfigurationData activeCupData = Instrument.CupConfigurationDataList.GetActiveCupConfiguration();
+    foreach(IRMSBaseCollectorItem col in activeCupData.CollectorItemList)
+    {
+        if ((col.CollectorType == IRMSBaseCollectorType.CounterCup) && (col.Mass.HasValue == true))
+        {
+            col.Active = activate;
+        }
+    }
+    if (activate)
+    {
+        List<string> cupNames = activeCupData.CollectorItemList.Where(col => col.Active).Select(c => c.Appearance.Label).ToList();
+        if (cupNames.Count > 0)
+        {
+            Instrument.UnprotectRequiredCounterCups(cupNames);
+        }
+    }
+    else
+    {
+        Instrument.ProtectAllCounterCupsWithPostDelay(Instrument.BaseSettingsData.CounterProtectionPreDelay);
+    }
+}
