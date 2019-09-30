@@ -18,7 +18,7 @@ under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 
-__version__=v19.9
+__version__=19.10
 */
 
 
@@ -42,8 +42,7 @@ static class Config
                                                                   "CUP 2,AX",
                                                                   "CUP 1,L1",
                                                                   "CUP 0,L2",
-                                                                  "CDD 0,CDD"
-                                                                  });
+                                                                  "CDD 0,CDD"});
 
     public static List<string> HELIX_MC_DETECTOR_NAMES = new List<string>(new string[]{
                                                                  "CUP 4,H2",
@@ -55,8 +54,14 @@ static class Config
 																 "CDD 1,L1(CDD)",
 																 "CDD 2,AX(CDD)",
 																 "CDD 3,H1(CDD)",
-																 "CDD 4,H2(CDD)"
-																 });
+																 "CDD 4,H2(CDD)"});
+
+	public static List<string< HELIX_SFT_DETECTOR_NAMES = new List<string>(new string[]{
+	                                                            "CUP 1,H1",
+	                                                            "CUP 0,AX",
+	                                                            "CDD 0,CDD"});
+
+
 
     // user configurable attributes
     public static int port = 1069;
@@ -108,6 +113,9 @@ class RemoteControl
         //DETECTOR_NAMES = Config.HELIX_MC_DETECTOR_NAMES
         // ================================================================================
 
+        //Instrument= HelixSFT
+        DETECTOR_NAMES = Config.HELIX_SFT_DETECTOR_NAMES
+
         //init parameters
         Instrument.GetParameter("Y-Symmetry Set", out LAST_Y_SYMMETRY);
 
@@ -154,6 +162,7 @@ class RemoteControl
     //      GetSubCupParameters returns list of Deflection voltages and the Ion Counter supply voltage
     //      SetSubCupConfiguration <sub cup name>
     //      ActivateCupConfiguration <cup name> <sub cup name>
+
     //===========Ion Counter============================================
     //      ActivateIonCounter <detname>
     //      DeactivateIonCounter <detname>
@@ -169,10 +178,6 @@ class RemoteControl
     //      GetMagnetMoving
     //      @SetMass <value>,<string cupName> #deactivates the CDDs if they are active
 
-    //===========Source=================================================
-    // GetParameter <name>
-    // SetParameter <name>,<value>
-
     //==========Detectors===============================================
     //      ProtectDetector <name>,<On/Off>
 	//      GetDeflection <name>
@@ -181,6 +186,7 @@ class RemoteControl
 	//      SetIonCounterVoltage <value>
 	//      GetGain <name>
 	//      GetDeflections <name>[,<name>,...]
+
 	//==================================================================
 	//		Error Responses:
 	//			Error: Invalid Command   - the command is poorly formated or does not exist.
@@ -578,7 +584,7 @@ class RemoteControl
         // activate the CDDs...
 		if (!ActivateCounterCup(true, name))
 		{
-		    return "Could not activate CDDs.";
+		    return String.Format("Could not activate {0}.", name};
 		}
 		Thread.Sleep(1000); // Wait for a little time for the activation to take effect...
 
