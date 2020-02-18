@@ -18,7 +18,10 @@ under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 
-__version__=19.10
+
+Modified by Axel Suckow, Alec Deslandes, Christoph.Gerber (2019)
+
+__version__=20.2
 */
 
 
@@ -47,19 +50,19 @@ static class Config
     public static List<string> HELIX_MC_DETECTOR_NAMES = new List<string>(new string[]{
                                                                  "CUP 4,H2",
                                                                  "CUP 3,H1",
-																 "CUP 2,AX",
-																 "CUP 1,L1",
-																 "CUP 0,L2",
-																 "CDD 0,L2(CDD)",
-																 "CDD 1,L1(CDD)",
-																 "CDD 2,AX(CDD)",
-																 "CDD 3,H1(CDD)",
-																 "CDD 4,H2(CDD)"});
+																"CUP 2,AX",
+																"CUP 1,L1",
+																"CUP 0,L2",
+																"CDD 0,L2(CDD)",
+																"CDD 1,L1(CDD)",
+																"CDD 2,AX(CDD)",
+																"CDD 3,H1(CDD)",
+																"CDD 4,H2(CDD)"});
 
-	public static List<string< HELIX_SFT_DETECTOR_NAMES = new List<string>(new string[]{
-	                                                            "CUP 1,H1",
-	                                                            "CUP 0,AX",
-	                                                            "CDD 0,CDD"});
+	public static List<string> HELIX_SFT_DETECTOR_NAMES = new List<string>(new string[]{
+	                                                           "CUP 1,H1",
+	                                                           "CUP 0,AX",
+	                                                           "CDD 0,CDD"});
 
 
 
@@ -68,6 +71,7 @@ static class Config
     public static bool use_udp= true;
     public static bool tag_data= true;
     public static bool use_beam_blank= true;
+    public static double magnet_move_threshold_rel_mass=0.4;//relative mass threshold to trigger stepped magnet move
     public static double magnet_move_threshold=0.25;// threshold to trigger stepped magnet move in DAC units
     public static int magnet_steps=20; // number of steps to divide the total magnet displacement
     public static int magnet_step_time=100; //ms to delay between magnet steps
@@ -81,8 +85,6 @@ class RemoteControl
     private static Socket UDP_SOCK;
     private static Thread SERVER_THREAD;
     private static TcpListener TCPLISTENER;
-
-    private static bool MAGNET_MOVING=false;
 
     private static double LAST_Y_SYMMETRY=0;
     private static bool IsBLANKED=false;
@@ -100,6 +102,8 @@ class RemoteControl
 
 	private static List<string> DETECTOR_NAMES;
 
+    private static bool MAGNET_MOVING=false;
+    private static bool CDDS_ARE_ON = false; // keeps track of CDD state as long as this is done through "ActivateAllCDDs" and "DeactivateAllCDDs"
 
     public static void Main ()
     {
@@ -113,8 +117,8 @@ class RemoteControl
         //DETECTOR_NAMES = Config.HELIX_MC_DETECTOR_NAMES
         // ================================================================================
 
-        //Instrument= HelixSFT
-        DETECTOR_NAMES = Config.HELIX_SFT_DETECTOR_NAMES
+        Instrument= HelixSFT;
+        DETECTOR_NAMES = Config.HELIX_SFT_DETECTOR_NAMES;
 
         //init parameters
         Instrument.GetParameter("Y-Symmetry Set", out LAST_Y_SYMMETRY);
@@ -179,6 +183,8 @@ class RemoteControl
     //      @SetMass <value>,<string cupName> #deactivates the CDDs if they are active
 
     //==========Detectors===============================================
+    //      @ActivateAllCDDs #activates and unprotects all CDDs with a mass in the CupConfiguration
+	//      @DeactivateAllCDDs #deactivates and protects all CDDs
     //      ProtectDetector <name>,<On/Off>
 	//      GetDeflection <name>
 	//      SetDeflection <name>,<value>
@@ -363,7 +369,7 @@ class RemoteControl
             //Adapted from CSIRORemoteControlServer.cs
 			jargs=String.Join(" ", Slice(args,1,0));
             pargs=jargs.Split(',');
-		    result = SetMass(Convert.ToDouble(pargs[0]),(pargs.Length>1) ? pargs[1] : null);
+		   result = SetMass(Convert.ToDouble(pargs[0]),(pargs.Length>1) ? pargs[1] : null);
             break;
 //============================================================================================
 //    Source Parameters
@@ -430,6 +436,13 @@ class RemoteControl
             SetGain(pargs[0], Convert.ToDouble(pargs[1]));
             break;
 
+        case "ActivateAllCDDs":
+		    result = ActivateAllCDDs();
+			break;
+
+		case "DeactivateAllCDDs":
+		    result = DeactivateAllCDDs();
+			break;
 //============================================================================================
 //    Generic
 //============================================================================================
@@ -444,8 +457,8 @@ class RemoteControl
 		case "SetParameter":
 		    jargs=String.Join(" ", Slice(args,1,0));
             pargs=jargs.Split(',');
-		   result=SetParameter(pargs[0], Convert.ToDouble(pargs[1]));
-		   break;
+		  result=SetParameter(pargs[0], Convert.ToDouble(pargs[1]));
+		  break;
 		}
 		log(String.Format("{0} => {1}", cmd, result));
 		return result;
@@ -508,14 +521,14 @@ class RemoteControl
 
         return string.Join(",",data.ToArray());
     }
-    public state string GetParameters(string[] args)
+    public static string GetParameters(string[] args)
     {
         List<string> data = new List<string>();
         double v;
-        string param;
+        //string param;
         foreach(string k in args[1].Split(','))
         {
-           if (!Instrument.GetParameter(param, out v))
+           if (!Instrument.GetParameter(k, out v))
            {
                 v = 0;
            }
@@ -571,7 +584,7 @@ class RemoteControl
 	}
 	public static String SetIonCounterState(String name, bool state)
 	{
-		if (state)
+		/*if (state)
 		{
 			Logger.Log (LogLevel.UserInfo, "Setting IonCounterState True");
 		}
@@ -592,9 +605,9 @@ class RemoteControl
 		if (!RunMonitorScan(get_scan_mass()))
 		{
 			return "Could not restart monitor scan.";
-		}
+		}*/
 
-	    return "OK";
+	   return "OK";
 	}
 
 	public static string GetValveState(string hwname)
@@ -636,6 +649,42 @@ class RemoteControl
 		return result;
 	}
 
+    private static string ActivateAllCDDs()
+	{
+		// activate the CDDs...
+		if (!ActivateAllCounterCups(true))
+		{
+		    return "Could not activate CDDs.";
+		}
+		Thread.Sleep(1000); // Wait for a little time for the activation to take effect...
+
+		// Restart the monitor scan, to ensure data is reported for the CDD...
+		if (!RunMonitorScan(Instrument.MeasurementInfo.ActualScanMass))
+		{
+			return "Could not restart monitor scan.";
+		}
+
+		return "OK";
+	}
+
+	private static string DeactivateAllCDDs()
+	{
+
+		if (!ActivateAllCounterCups(false))
+		{
+			return "Could not deactivate CDDs.";
+		}
+
+		//This ensures that after the deactivation, data is not reported for the CDD...
+		if (!RunMonitorScan(Instrument.MeasurementInfo.ActualScanMass))
+		{
+			return "Could not restart monitor scan.";
+		}
+		Thread.Sleep(1000); //need to wait for a second before changes are done
+
+		return "OK";
+	}
+
     private static string SetMass(double m, string cup)
 	{
 		// First deactivate CDDs to protect them.
@@ -666,25 +715,27 @@ class RemoteControl
 		int count = 0;
 		while (currentMass != AXMass) //For large changes, do it stepwise to avoid ringing
 		{
-			if ((Math.Abs(currentMass-AXMass)/currentMass) < MAGNET_MOVE_THRESHOLD_REL_MASS) //for smallk changes
+			if ((Math.Abs(currentMass-AXMass)/currentMass) < Config.magnet_move_threshold_rel_mass) //for smallk
+			changes
 			{
 				currentMass = AXMass;
 			}
 			else // for large changes only change by a certain amount and repeat
 			{
-				currentMass += currentMass*MAGNET_MOVE_THRESHOLD_REL_MASS*((AXMass>currentMass) ? 1 : -1);
+				currentMass += currentMass*Config.magnet_move_threshold_rel_mass*((AXMass>currentMass) ? 1 : -1);
 			}
 			if (!RunMonitorScan(currentMass))
 			{
 				return "Error: Could not change mass.";
 			}
-			if (MAGNET_STEP_TIME>0)
+			if (Config.magnet_step_time>0)
             {
-                Thread.Sleep(MAGNET_STEP_TIME);
+                Thread.Sleep(Config.magnet_step_time);
             }
             count++;
 		}
         Logger.Log(LogLevel.UserInfo,String.Format("Mass was changed from {0} to {1} on the AX in {2} step(s).",initialMass,currentMass,count));
+
 		return "OK";
 	}
 
@@ -784,7 +835,7 @@ class RemoteControl
             }
         }
 
-	   return String.Format("{0}",gain);
+	  return String.Format("{0}",gain);
 	}
 
     private static string get_cup_name(IRMSBaseCollectorItem item)
@@ -910,7 +961,7 @@ class RemoteControl
 
 	private static string GetSubCupParameters()
 	{
-	   // change parameters to values relevant for your system
+	  // change parameters to values relevant for your system
 	    // default is Argus VI c. 2010
 		List<string> parameters = new List<string>(new string[]{
 												"Deflection H2 Set",
@@ -960,16 +1011,16 @@ class RemoteControl
 			Logger.Log (LogLevel.UserError, String.Format ("Could not find cup configuration \'{0}\'.", cupConfigurationName));
 			return null;
 		}
-		
+
 		List<string> result = new List<string>();
 		foreach (var item in cupData.SubCupConfigurationList) {
 			result.Add (item.Name);
 		}
-		
+
 
 		return result;
 	}
-	
+
 	//-------------------------------------------------------------------------------------------------------------------------------------------------------------
 	// <summary>
 	// Activate a cup configuration and sub cup configuration.
@@ -981,7 +1032,7 @@ class RemoteControl
 	//-------------------------------------------------------------------------------------------------------------------------------------------------------------
 	private static bool ActivateCupConfiguration (string cupConfigurationName, string subCupConfigurationName)
 	{
-		
+
 		//Console.WriteLine (cupConfigurationName);
 		//Console.WriteLine (subCupConfigurationName);
 		IRMSBaseCupConfigurationData cupData = Instrument.CupConfigurationDataList.FindCupConfigurationByName (cupConfigurationName);
@@ -1003,9 +1054,9 @@ class RemoteControl
 		}
 		return true;
 	}
-	
-	
-	
+
+
+
 //====================================================================================================================================
 //Server Methods
 //====================================================================================================================================
@@ -1210,5 +1261,4 @@ class RemoteControl
     return res;
     }
 }
-
 
